@@ -109,10 +109,9 @@ export class Z80 implements CPU {
     }
     
     
-    execute(numOfInstructions: number) {
+    execute(numOfInstructions: number, showLog: boolean) {
         for (let i = 0; i < numOfInstructions; i++) {
-            console.log(i);
-            this.fetchInstruction();
+            this.fetchInstruction(showLog);
         }
     }
 
@@ -240,8 +239,8 @@ export class Z80 implements CPU {
         this.flags8(result & 0xFF);
     }
 
-    private fetchInstruction() {
-        this.dumpRegisters();
+    private fetchInstruction(log: boolean) {
+        //this.dumpRegisters();
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
         //this.log(addr, `Opcode: ${opcode.toString(16)}`);
@@ -262,10 +261,10 @@ export class Z80 implements CPU {
             if (z === 0) {
                 switch (y) {
                     case 0:
-                        this.log(addr, "NOP");
+                        if (log) { this.log(addr, "NOP"); }
                         break;
                     case 1:
-                        this.log(addr, "EX AF, AF'");
+                        if (log) { this.log(addr, "EX AF, AF'"); }
                         let tmp = this.r16[AF];
                         this.r16[AF] = this.r16s[AF];
                         this.r16s[AF] = this.r16[AF];
@@ -273,7 +272,7 @@ export class Z80 implements CPU {
                     case 2:
                         {
                             let d = this.memory.read8(this.r16[PC]++);
-                            this.log(addr, "DJNZ " + d);
+                            if (log) { this.log(addr, "DJNZ " + d); }
                             this.r8[B]--;
                             this.r16[PC] += this.r8[B] !== 0 ? d : 0;
                         }
@@ -281,7 +280,7 @@ export class Z80 implements CPU {
                     case 3:
                         {
                             let d = this.memory.read8(this.r16[PC]++);
-                            this.log(addr, "JR " + d);
+                            if (log) { this.log(addr, "JR " + d); }
                             this.r16[PC] += d;
                         }
                         break;
@@ -291,7 +290,7 @@ export class Z80 implements CPU {
                     case 7:
                         {
                             let d = this.memory.read8(this.r16[PC]++);
-                            this.log(addr, `JR ${cc_debug[y - 4]}, ${d}`);
+                            if (log) { this.log(addr, `JR ${cc_debug[y - 4]}, ${d}`); }
                             this.r16[PC] += this.cc(y - 4) ? d : 0;
                         }
                     default:
@@ -301,11 +300,11 @@ export class Z80 implements CPU {
             if (z === 1) {
                 if (q === 0) {
                     let nn = this.memory.uread8(this.r16[PC]++) | (this.memory.uread8(this.r16[PC]++) << 8);
-                    this.log(addr, "LD " + rp_debug[p] + ", $" + nn.toString(16));
+                    if (log) { this.log(addr, "LD " + rp_debug[p] + ", $" + nn.toString(16)); }
                     this.r16[rp[p]] = nn & 0xFFFF; //(nn & 0xFF)  << 8 + ((nn >> 8) & 0xFF);
                 }
                 if (q == 1) {
-                    this.log(addr, "ADD HL, " + rp_debug[p]);
+                    if (log) { this.log(addr, "ADD HL, " + rp_debug[p]); }
                     this.r16[HL] = this.ADD16(this.r16[HL], this.r16[rp[p]]);
                 }
             }
@@ -313,10 +312,10 @@ export class Z80 implements CPU {
             if (z === 2) {
                 if (p < 2) {
                     if (q === 0) {
-                        this.log(addr, "LD (" + rp_debug[p] + "), A");
+                        if (log) { this.log(addr, "LD (" + rp_debug[p] + "), A"); }
                         this.memory.uwrite8(this.r16[rp[p]], this.r8[A]);
                     } else {
-                        this.log(addr, "LD A, (" + rp_debug[p] + ")");
+                        if (log) { this.log(addr, "LD A, (" + rp_debug[p] + ")"); }
                         this.r8[A] = this.memory.read8(this.r16[rp[p]]);
                     }
                 } else {
@@ -324,18 +323,18 @@ export class Z80 implements CPU {
                     let nn = this.memory.uread8(this.r16[PC]++) + (this.memory.uread8(this.r16[PC]++) << 8);
                     if (q === 0) {
                         if (p === 2) {
-                            this.log(addr, "LD (" + nn.toString(16) + "), HL");
+                            if (log) { this.log(addr, "LD (" + nn.toString(16) + "), HL"); }
                             this.memory.uwrite16(nn, this.r16[HL]);
                         } else {
-                            this.log(addr, "LD (" + nn.toString(16) + "), A");
+                            if (log) { this.log(addr, "LD (" + nn.toString(16) + "), A"); }
                             this.memory.uwrite8(nn, this.r8[A]);
                         }
                     } else {
                         if (p === 2) {
-                            this.log(addr, "LD HL, (" + nn.toString(16) + ")");
+                            if (log) { this.log(addr, "LD HL, (" + nn.toString(16) + ")"); }
                             this.r16[HL] = this.memory.uread16(nn);
                         } else {
-                            this.log(addr, "LD A, (" + nn.toString(16) + ")");
+                            if (log) { this.log(addr, "LD A, (" + nn.toString(16) + ")"); }
                             this.r8[A] = this.memory.uread8(nn);
                         }
                     }
@@ -344,53 +343,59 @@ export class Z80 implements CPU {
             }
 
             if (z === 3) {
-                this.log(addr, (q === 0 ? "INC" : "DEC") + " " + rp_debug[p]);
+                if (log) { this.log(addr, (q === 0 ? "INC" : "DEC") + " " + rp_debug[p]); }
                 this.r16[rp[p]] += (q === 0 ? 1 : -1);
             }
 
             if (z === 4) {
-                this.log(addr, "INC " + r_debug[y]);
+                if (log) { this.log(addr, "INC " + r_debug[y]); }
                 this.flags8(++this.r8[r[y]]);
             }
 
             if (z === 5) {
-                this.log(addr, "DEC " + r_debug[y]);
+                if (log) { this.log(addr, "DEC " + r_debug[y]); }
                 this.flags8(--this.r8[r[y]]);
             }
 
             if (z === 6) {
                 let n = this.memory.uread8(this.r16[PC]++);
-                this.log(addr, `LD ${r_debug[y]}, ${this.hex8(n)}`);
+                if (log) { this.log(addr, `LD ${r_debug[y]}, ${this.hex8(n)}`); }
                 this.r8[r[y]] = n;
             }
 
             if (z === 7) {
                 switch(y) {
                     case 0: // RLCA
-                        this.log(addr, 'RLCA');
+                        if (log) { this.log(addr, 'RLCA'); }
                         let result = this.r8[A] << 1;                        
                         this.r8[F] = result & 0x100 ? FLAG_CARRY : 0;
                         this.r8[A] = (result & 0xFF) | (result & 0x100 ? 1 : 0);
                         break;
                     case 1: // RRCA
-                        //this.log(addr, 'RRCA');
+                        if (log) { this.log(addr, 'RRCA NOT IMPLEMENTED'); }
                         break;
                     case 2: // RLA
+                        if (log) { this.log(addr, 'RLA NOT IMPLEMENTED'); }
                         //this.log(addr, 'RLA');
                         break;
-                    case 3: // RRA         
+                    case 3: // RRA      
+                        if (log) { this.log(addr, 'RRA NOT IMPLEMENTED'); }
                         //this.log(addr, 'RRA');                                           
                         break;
                     case 4:	// DAA
+                        if (log) { this.log(addr, 'DAA NOT IMPLEMENTED'); }
                         //this.log(addr, 'DAA');
                         break;
                     case 5:	// CPL
+                        if (log) { this.log(addr, 'CPL NOT IMPLEMENTED'); }
                         //this.log(addr, 'CPL');
                         break;                        
-                    case 6:	// SCF                    
+                    case 6:	// SCF    
+                        if (log) { this.log(addr, 'SCF NOT IMPLEMENTED'); }
                         //this.log(addr, 'SCF');
                         break;
                     case 7:	// CCF
+                        if (log) { this.log(addr, 'CCF NOT IMPLEMENTED'); }
                         //this.log(addr, 'CCF');
                         break;
                 }
@@ -401,15 +406,15 @@ export class Z80 implements CPU {
 
         if (x === 1) {
             if (z === 6 && y === 6) {
-                this.log(addr, "HALT");
+                if (log) { this.log(addr, "HALT"); }
                 this.r16[PC]--;
                 this.halt();
             } else {
                 if (z == 7 && y == 6) {
-                    this.log(addr, `LD (${r_debug[y]}), ${r_debug[z]}`);
+                    if (log) { this.log(addr, `LD (${r_debug[y]}), ${r_debug[z]}`); }
                     this.memory.uwrite8(this.r16[r[y]], this.r8[r[z]]);
                 } else {
-                    this.log(addr, `LD ${r_debug[y]}, ${r_debug[z]}`);
+                    if (log) { this.log(addr, `LD ${r_debug[y]}, ${r_debug[z]}`); }
                     this.r8[r[y]] = this.r8[r[z]];
                 }
             }
@@ -417,20 +422,20 @@ export class Z80 implements CPU {
 
         if (x === 2) {
             if (z == 6) {
-                this.log(addr, `${alu_debug[y]} (${r_debug[z]})`);
+                if (log) { this.log(addr, `${alu_debug[y]} (${r_debug[z]})`); }
                 let val = this.memory.uread8(this.r16[r[z]]);
                 console.log(val.toString(16));
                 this.aluOperation(y, val);
             } else {
-                this.log(addr, `${alu_debug[y]} ${r_debug[z]}`);
+                if (log) { this.log(addr, `${alu_debug[y]} ${r_debug[z]}`); }
                 this.aluOperation(y, this.r8[r[z]]);
             }
         }
 
         if (x === 3) {
             if (z === 0) {
-                this.log(addr, `RET ${cc_debug[y]}`);
-                this.log(addr, `${cc_debug[y]} FLAG : ${this.cc(y)}`);
+                if (log) { this.log(addr, `RET ${cc_debug[y]}`); }
+                if (log) { this.log(addr, `${cc_debug[y]} FLAG : ${this.cc(y)}`); }
                 if (this.cc(y)) {
                     this.r16[PC] = this.memory.uread16(this.r16[SP]);
                     this.r16[SP] += 2
@@ -439,17 +444,17 @@ export class Z80 implements CPU {
 
             if (z === 1) {
                 if (q === 0) {                    
-                    this.log(addr, `POP ${rp2_debug[p]}`);
+                    if (log) { this.log(addr, `POP ${rp2_debug[p]}`); }
                     this.r16[rp2[p]] = this.memory.uread16(this.r16[SP]++);
                 } else {
                     switch(p) {
                         case 0:
-                            this.log(addr, 'RET');
+                            if (log) {  this.log(addr, 'RET'); }
                             this.r16[PC] = this.memory.uread16(this.r16[SP]);
                             this.r16[SP] += 2;
                             break;
                         case 1:
-                            this.log(addr, 'EXX');
+                            if (log) { this.log(addr, 'EXX'); }
                             let bc = this.r16[BC];
                             let de = this.r16[DE];
                             let hl = this.r16[HL];
@@ -461,10 +466,10 @@ export class Z80 implements CPU {
                             this.r16[HL] = hl;
                             break;
                         case 2:
-                            this.log(addr, 'JP HL (NOT IMPLEMENTED)');
+                            if (log) { this.log(addr, 'JP HL (NOT IMPLEMENTED)'); }
                             break;
                         case 3:
-                            this.log(addr, 'LD SP,HL (NOT IMPLEMENTED)');
+                            if (log) { this.log(addr, 'LD SP,HL (NOT IMPLEMENTED)'); }
                             break;
                     }
 
@@ -474,7 +479,7 @@ export class Z80 implements CPU {
             if (z === 2) {
                 let nn = this.memory.uread16(this.r16[PC])
                 this.r16[PC] += 2;
-                this.log(addr, `JP ${cc_debug[y]}, ${(nn).toString(16)}`);
+                if (log) { this.log(addr, `JP ${cc_debug[y]}, ${(nn).toString(16)}`); }
                 if (nn_predicates[y](this.r8[F])) {
                     this.r16[PC] = nn;
                 }
@@ -488,40 +493,40 @@ export class Z80 implements CPU {
                 switch(y) {
                     case 0: //	JP nn
                         let nn = this.memory.uread16(this.r16[PC])                        
-                        this.log(addr, `JP ${this.hex16(nn)}`);
+                        if (log) { this.log(addr, `JP ${this.hex16(nn)}`); }
                         this.r16[PC] = nn;
                         break;
 
                     case 1:	//(CB prefix)
-                        this.log(addr, `CB prefix instruction`);
+                        if (log) { this.log(addr, `CB prefix instruction NOT IMPLEMENTED`); }
                         break;
                     case 2:	//OUT (n), A
                         n = this.memory.uread8(this.r16[PC]++);
-                        this.log(addr, `OUT (0x${n.toString(16)}), A`);
+                        if (log) { this.log(addr, `OUT (0x${n.toString(16)}), A`); }
                         this.IO.write8(n, this.r8[A]);                       
                         break;
                     case 3:	//IN A, (n)
                         n = this.memory.uread8(this.r16[PC]++);
-                        this.log(addr, `IN A,(0x${n.toString(16)})`);
+                        if (log) { this.log(addr, `IN A,(0x${n.toString(16)})`); }
                         this.r8[A] = this.IO.read8(n);                     
                         break;
                     case 4: //EX (SP), HL 
-                        this.log(addr, `EX (SP), HL`);                        
+                        if (log) { this.log(addr, `EX (SP), HL`); }                  
                         let sp = this.memory.uread16(this.r16[SP]);
                         this.memory.uwrite16(this.r16[SP], this.r16[HL]);
                         this.r16[HL] = sp;
                         break;
                     case 5:	//EX DE, HL   
-                        this.log(addr, `EX DE, HL`);
+                        if (log) { this.log(addr, `EX DE, HL`); }
                         let de = this.r16[DE];
                         this.r16[DE] = this.r16[HL];
                         this.r16[HL] = de;                        
                         break;
                     case 6:	//DI
-                        this.log(addr, `DI NOT IMPLEMENTED`);
+                        if (log) { this.log(addr, `DI NOT IMPLEMENTED`); }
                         break;
                     case 7:	//EI
-                        this.log(addr, `EI NOT IMPLEMENTED`);
+                        if (log) { this.log(addr, `EI NOT IMPLEMENTED`); }
                         break;
                 }
             }
@@ -530,13 +535,13 @@ export class Z80 implements CPU {
                 // TODO: incorrect
                 let nn = this.memory.uread16(this.r16[PC]++)
                 this.r16[PC]++;
-                this.log(addr, `CALL ${this.hex16(nn)}`);
+                if (log) {  this.log(addr, `CALL ${this.hex16(nn)}`); }
             }
 
             if (z === 5) {
                 if (q === 0) {
                     // TODO: implement;
-                    this.log(addr, `PUSH ${rp2_debug[p]}`);
+                    if (log) { this.log(addr, `PUSH ${rp2_debug[p]}`); }
                 } else {
                     if (p === 0) {
                         
@@ -561,12 +566,12 @@ export class Z80 implements CPU {
 
             if (z === 6) {
                 let n = this.memory.uread8(this.r16[PC]++);
-                this.log(addr, alu_debug[y] + " $" + n.toString(16));
+                if (log) { this.log(addr, alu_debug[y] + " $" + n.toString(16)); }
                 this.aluOperation(y, n);
             }
 
             if (z === 7) {
-                this.log(addr, `RST ${(y * 8).toString(16)}`);
+                if (log) { this.log(addr, `RST ${(y * 8).toString(16)}`); }
                 this.r16[PC] = (y * 8) & 0xFF;
             }
         }

@@ -1,4 +1,4 @@
 export interface CPU {
-    execute(numOfInstructions: number): void;
+    execute(numOfInstructions: number, showLog: boolean): void;
     halt(): void;
 }

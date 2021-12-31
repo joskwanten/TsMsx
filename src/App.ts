@@ -4,9 +4,7 @@ import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger } from './Logger';
 import { Z80 } from './Z80';
-import * as fs from 'fs';
 import { Slots } from './Slots';
-import { randomBytes } from 'crypto';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
 
@@ -168,6 +166,14 @@ async function run() {
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
 
+    class ScreenLogger implements Logger {
+        debug(str: string): void {
+            let div = document.createElement('div');
+            div.textContent = str;
+            document.querySelector('#logger')?.appendChild(div);
+        }
+    }
+
     class DummyIo implements IO {
         read8(address: number): number {
             switch(address) {
@@ -194,12 +200,12 @@ async function run() {
 
 
 
-    let logger = new Logger();
+    let logger = new ScreenLogger();
 
     z80 = new Z80(slots, io, logger);
     
     //while(1) {
-        z80.execute(100);
+        z80.execute(100, true);
         await wait(100);
     //}
 }

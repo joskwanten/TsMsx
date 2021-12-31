@@ -1,18 +1,29 @@
 <html>
     <head>
+        <link rel="stylesheet" href="styles.css">
         <style>
-            * {box-sizing: border-box;}
-            body {
-                background: #222;
-                color: #bbb;
-            }
         </style>
         <title>TsMsx</title>
         <script type="module" src="dist/App.js"></script>
     </head>
     <body>
         <div class="header">
+            <div class="title">
             TsMsx
+            </div>
         </div>
+        <div class="content">
+            <div class="window big">
+                <div id="logger">
+                </div>
+            </div>
+            <div class="side-panel">
+                <button>RESET</button>
+                <button>STEP</button>
+                <button>STEP 10</button>
+                <button>STEP 100</button>
+            </div>
+        </div>
+        <div class="footer">Footer</div>
     </body>
 </html>

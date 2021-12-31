@@ -1,5 +1,3 @@
-export class Logger {
-    debug(str: string): void {
-        console.log("Debug : " + str);
-    }
+export interface Logger {
+    debug(str: string): void;
 }
