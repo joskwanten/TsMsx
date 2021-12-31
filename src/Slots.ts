@@ -1,0 +1,51 @@
+import { SlotSelector } from './SlotSelector';
+import { Memory } from './Memory'
+
+
+export class Slots implements Memory, SlotSelector  {
+    slotRegister: number = 0xf0; // Default VG8020 configuration
+    
+    constructor(private slots: Memory[]) {
+        console.log(slots.length);
+    }
+    getSlotSelector(): number {
+        return this.slotRegister;
+    }
+
+    setSlotSelector(value: number): void {
+        this.slotRegister = value;
+    }
+
+    selectedSlot(address: number): Memory {
+        //console.log(`Address: ${address.toString(16)}`);
+        if (address >= 0 && address <= 0x3fff) {
+            return this.slots[this.slotRegister & 0x3];
+        } else if (address >= 0x4000 && address <= 0x7fff) {
+            return this.slots[(this.slotRegister >> 2) & 0x3];
+        } else if (address >= 0x8000 && address <= 0xbfff) {
+            return this.slots[(this.slotRegister >> 4) & 0x3];
+        } else {
+            return this.slots[(this.slotRegister >> 6) & 0x3];
+        }
+    }
+
+    uread8(address: number): number {
+        return this.selectedSlot(address).uread8(address);
+    }
+
+    read8(address: number): number {
+        return this.selectedSlot(address).read8(address);
+    }
+
+    uread16(address: number): number {
+        return this.selectedSlot(address).uread16(address);
+    }
+
+    uwrite8(address: number, value: number): void {
+        this.selectedSlot(address).uwrite8(address, value);
+    }
+
+    uwrite16(address: number, value: number): void {
+        this.selectedSlot(address).uwrite16(address, value);
+    }
+}
