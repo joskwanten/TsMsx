@@ -69,6 +69,21 @@ body {
     height: 100%;
     overflow-y: auto;
     font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-line {
+    display: flex;
+    flex-direction: row;
+}
+
+.mnemonic {
+    flex: 0 0 256px;
+}
+
+.register {
+    flex: 0 0 80px;
 }
 
 .big {

@@ -7,6 +7,7 @@ import { Z80 } from './Z80';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
+import { disconnect } from 'process';
 
 /*
 "11 0A 00 1B 7A B3 C2 03 00"
@@ -169,7 +170,19 @@ async function run() {
     class ScreenLogger implements Logger {
         debug(str: string, registers: Registers): void {
             let div = document.createElement('div');
-            div.textContent = str;
+            div.classList.add('log-line');
+
+            let logtext = document.createElement('div');
+            logtext.classList.add('mnemonic');
+            logtext.innerText = str;            
+            div.appendChild(logtext);
+
+            Object.entries(registers).slice(0, 4).forEach(r => {
+                let d = document.createElement('div');
+                d.classList.add('register');
+                d.innerText = `${r[0]}=${('0000' + r[1].toString(16)).slice(-4)}`;
+                div.appendChild(d);
+            });
             document.querySelector('#logger')?.appendChild(div);
         }
     }

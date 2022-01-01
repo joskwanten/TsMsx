@@ -91,7 +91,6 @@ export class Z80 implements CPU {
 
     public dumpRegisters(): Registers {
         let registers: Registers = {};
-        registers['test']=1;
         r16_debug.forEach((v, i) => {
             registers[v] = this.r16[i];
         });
