@@ -1,3 +1,7 @@
+export interface Registers {
+    [key: string]: number;
+}
+
 export interface Logger {
-    debug(str: string): void;
+    debug(str: string, registers: Registers ): void;
 }

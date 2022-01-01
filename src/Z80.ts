@@ -1,4 +1,4 @@
-import { Logger } from './Logger';
+import { Logger, Registers } from './Logger';
 import { CPU } from "./CPU";
 import { IO } from "./IO";
 import { Memory } from "./Memory";
@@ -89,17 +89,14 @@ export class Z80 implements CPU {
     }
 
 
-    public dumpRegisters() {
-        let s = "Registers:";
-        let first = true;
+    public dumpRegisters(): Registers {
+        let registers: Registers = {};
+        registers['test']=1;
         r16_debug.forEach((v, i) => {
-            s += !first ? ", " : " ";
-            s += v + ":" + this.hex16(this.r16[i]);
-            first = false;
-        })
+            registers[v] = this.r16[i];
+        });
 
-        //this.logger.debug(Buffer.from(this.r8).toString('hex'));
-        this.logger.debug(s);
+        return registers;
     }
 
 
@@ -156,13 +153,16 @@ export class Z80 implements CPU {
     }
 
     private log(address: number, msg: string): void {
-        this.logger.debug(("000" + address.toString(16)).slice(-4) + " : " + msg);
+        this.logger.debug(
+            ("000" + address.toString(16)).slice(-4) + " : " + msg, 
+            this.dumpRegisters()
+        );
 
     }
 
     private ADD8(p1: number | 0, p2: number | 0): number {
         let result = (p1 & 0xFF) + (p2 & 0xFF);
-        this.logger.debug("ADD8 result : " + result.toString(16));
+        this.log(0, "ADD8 result : " + result.toString(16));
         this.flags8(result);
         return result & 0xFF;
     }
@@ -366,11 +366,13 @@ export class Z80 implements CPU {
             if (z === 7) {
                 switch(y) {
                     case 0: // RLCA
+                    {
                         if (log) { this.log(addr, 'RLCA'); }
                         let result = this.r8[A] << 1;                        
                         this.r8[F] = result & 0x100 ? FLAG_CARRY : 0;
                         this.r8[A] = (result & 0xFF) | (result & 0x100 ? 1 : 0);
                         break;
+                    }
                     case 1: // RRCA
                         if (log) { this.log(addr, 'RRCA NOT IMPLEMENTED'); }
                         break;
@@ -387,9 +389,12 @@ export class Z80 implements CPU {
                         //this.log(addr, 'DAA');
                         break;
                     case 5:	// CPL
-                        if (log) { this.log(addr, 'CPL NOT IMPLEMENTED'); }
-                        //this.log(addr, 'CPL');
-                        break;                        
+                    {
+                        if (log) { this.log(addr, 'CPL'); }
+                        this.r8[A] = ~this.r8[A];                        
+                        this.r8[F] = this.r8[F] | FLAG_HALF_CARRY | FLAG_ADDSUB;
+                        break;            
+                    }            
                     case 6:	// SCF    
                         if (log) { this.log(addr, 'SCF NOT IMPLEMENTED'); }
                         //this.log(addr, 'SCF');

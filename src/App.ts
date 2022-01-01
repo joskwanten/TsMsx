@@ -2,7 +2,7 @@ import { SubSlotSelector } from './SubSlotSelector';
 import { SlotSelector } from './SlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
-import { Logger } from './Logger';
+import { Logger, Registers } from './Logger';
 import { Z80 } from './Z80';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
@@ -167,7 +167,7 @@ async function run() {
     let slots = new Slots([slot0, slot1, slot2, slot3]);
 
     class ScreenLogger implements Logger {
-        debug(str: string): void {
+        debug(str: string, registers: Registers): void {
             let div = document.createElement('div');
             div.textContent = str;
             document.querySelector('#logger')?.appendChild(div);
