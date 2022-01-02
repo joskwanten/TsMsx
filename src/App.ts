@@ -1,5 +1,5 @@
+import { TMS9918 } from './TMS9918';
 import { SubSlotSelector } from './SubSlotSelector';
-import { SlotSelector } from './SlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger, Registers } from './Logger';
@@ -7,7 +7,6 @@ import { Z80 } from './Z80';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
-import { disconnect } from 'process';
 
 /*
 "11 0A 00 1B 7A B3 C2 03 00"
@@ -158,14 +157,18 @@ function wait(ms: number) {
 
 let z80: Z80|null = null;
 
-async function run() {
+async function reset() {
     let response= await fetch('cbios_main_msx1.rom');
     let buffer = await response.arrayBuffer();
-    let slot0 = new Rom(new Uint8Array(buffer));
+    let bios = new Uint8Array(buffer);
+    let romMemory = new Uint8Array(0x10000);
+    bios.forEach((b, i) => romMemory[i] = b);
+    let slot0 = new Rom(romMemory);
     let slot1 = new EmptySlot();
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
+    let vdp = new TMS9918();
 
     class ScreenLogger implements Logger {
         debug(str: string, registers: Registers): void {
@@ -177,21 +180,36 @@ async function run() {
             logtext.innerText = str;            
             div.appendChild(logtext);
 
-            Object.entries(registers).slice(0, 4).forEach(r => {
+            let indexes = ['AF', 'BC', 'DE', 'HL', 'SP', '_BC', '_DE', '_HL'];
+            indexes.forEach(i => {
                 let d = document.createElement('div');
                 d.classList.add('register');
-                d.innerText = `${r[0]}=${('0000' + r[1].toString(16)).slice(-4)}`;
+                d.innerText = `${i}=${('0000' + registers[i].toString(16)).slice(-4)}`;
                 div.appendChild(d);
             });
-            document.querySelector('#logger')?.appendChild(div);
+
+            let logger =  document.querySelector('#logger');
+            if (logger) {
+                let maxLines = 1000;
+                let numOfRowsTooMany = logger.children.length - maxLines;
+                for(let i = 0; i < numOfRowsTooMany; i++) {
+                    logger.removeChild(logger.children[i]);
+                }
+                logger.appendChild(div);
+                logger.scrollTop = logger.scrollHeight;
+            }
         }
     }
 
-    class DummyIo implements IO {
+    class IoBus implements IO {
         read8(address: number): number {
             switch(address) {
+                case 0x98:
+                    return vdp.read(false);
+                case 0x99:
+                    return vdp.read(true); 
                 case 0xa8: 
-                    return slots.getSlotSelector();
+                    return slots.getSlotSelector();                
                 default:
                     console.log(`Port read not implemented ${address.toString(16)}`);
                     return 0xff;
@@ -199,6 +217,12 @@ async function run() {
         }
         write8(address: number, value: number): void {
             switch(address) {
+                case 0x98:
+                    vdp.write(false, value);
+                    break;
+                case 0x99:
+                    vdp.write(true, value); 
+                    break;
                 case 0xa8: 
                     slots.setSlotSelector(value);
                     break;
@@ -209,7 +233,7 @@ async function run() {
         }   
     }
 
-    let io = new DummyIo();
+    let io = new IoBus();
 
 
 
@@ -218,11 +242,52 @@ async function run() {
     z80 = new Z80(slots, io, logger);
     
     //while(1) {
-        z80.execute(100, true);
-        await wait(100);
     //}
 }
 
-run().then(() => {
+reset().then(() => {
     console.log(z80);    
 });
+
+let running = false;
+
+function step(numOfSteps: number) {
+    z80?.execute(numOfSteps, true);
+}
+
+window.onload = () => {
+    document.querySelector('#reset')?.addEventListener('click', () => {
+        reset();        
+    });
+
+    document.querySelector('#step1')?.addEventListener('click', () => {
+        step(1);
+    });
+
+    document.querySelector('#step10')?.addEventListener('click', () => {
+        step(10);
+    });
+
+    document.querySelector('#step100')?.addEventListener('click', () => {
+        step(100);
+    });
+    
+    document.querySelector('#run')?.addEventListener('click', async () => {
+        running = true;
+        while(running) {
+            step(100);
+            await wait(10);
+            if (!running) {
+                return;
+            }
+        }
+    });
+
+    document.querySelector('#stop')?.addEventListener('click', async () => {
+        running = false;
+    });
+
+    document.querySelector('#runBreak')?.addEventListener('click', async () => {
+        z80?.executeUntil(0x22e);
+    });    
+}

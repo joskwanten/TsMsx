@@ -3,10 +3,10 @@ import { Memory } from './Memory'
 
 
 export class SubSlotSelector implements Memory  {
-    subSlotRegister: number = 0xf0; // Default VG8020 configuration
+    subSlotRegister = 0;
     
     constructor(private subSlots: Memory[]) {
-        console.log(subSlots.length);
+        //console.log(subSlots.length);
     }
 
     selectedSlot(address: number): Memory {
@@ -23,7 +23,10 @@ export class SubSlotSelector implements Memory  {
     }
 
     uread8(address: number): number {
-        console.log(`Reading ${address.toString(16)}`);
+        if (address == 0xffff) {
+            console.log(`Reading Subslot register ${address.toString(16)}`);
+            return (~this.subSlotRegister) & 0xff;
+        }        
         return this.selectedSlot(address).uread8(address);
     }
 
@@ -36,19 +39,16 @@ export class SubSlotSelector implements Memory  {
     }
 
     uwrite8(address: number, value: number): void {
-        console.log(`Writing ${address.toString(16)},${value.toString(16)}`);
         if (address == 0xffff) {
-            this.subSlotRegister = value;
-            value = ~value;
+            this.subSlotRegister = value & 0xff;            
+        } else {
+            this.selectedSlot(address).uwrite8(address, value);
         }
-
-        this.selectedSlot(address).uwrite8(address, value);
     }
 
     uwrite16(address: number, value: number): void {
         if (address == 0xfffe) {
-            this.subSlotRegister = value >> 8 && 0xff;
-            value = (value && 0xff) + (~this.subSlotRegister) << 8;
+            this.subSlotRegister = (value >> 8) & 0xff;            
         }
 
         this.selectedSlot(address).uwrite16(address, value);
