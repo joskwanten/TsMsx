@@ -156,6 +156,7 @@ function wait(ms: number) {
 }
 
 let z80: Z80 | null = null;
+let vdp = new TMS9918();
 
 async function reset() {
     let response = await fetch('cbios_main_msx1.rom');
@@ -168,8 +169,7 @@ async function reset() {
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
-    let vdp = new TMS9918();
-
+    
     class ScreenLogger implements Logger {
         debug(str: string, registers: Registers): void {
             let div = document.createElement('div');
