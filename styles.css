@@ -104,6 +104,11 @@ body {
     display: flex;
 }
 
+#screen {
+    width: 212px;
+    height: 192px;
+}
+
 .footer {
     flex: 0 0 64px;
     display: flex;

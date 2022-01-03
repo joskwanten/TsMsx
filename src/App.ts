@@ -97,7 +97,7 @@ import { Ram } from './Ram';
 //             console.log(`Written ${address.toString(16)} ${memory.uread8(address + i).toString(16)}`);
 //         }
 //     }
-    
+
 //     console.log(`${length} ${address} ${recordType} ${data}`);
 // })
 
@@ -121,17 +121,17 @@ loop:
 "21 14 00 CD 07 00 76 7E A7 C8 CD 11 00 23 18 F7 C9 D3 FF C9 48 65 6C 6C 6F 20 77 6F 72 6C 64 21"
 ; Program code entry point
 Execute:
-	ld	hl,Hello_TXT	; Load the address from the label Hello_TXT into HL.
-	call	Print		; Call the routine Print below.
-	halt			; Back to MSX-BASIC environment.
+    ld	hl,Hello_TXT	; Load the address from the label Hello_TXT into HL.
+    call	Print		; Call the routine Print below.
+    halt			; Back to MSX-BASIC environment.
  
 Print:
-	ld	a,(hl)		; Load the byte from memory at address indicated by HL into A.
-	and	a		; Same as CP 0 but faster.
-	ret	z		; Back behind the call print if A = 0
-	call	chput		; Call the routine to display a character.
-	inc	hl		; Increment the HL value.
-	jr	Print		; Relative jump to the address in the label Print.
+    ld	a,(hl)		; Load the byte from memory at address indicated by HL into A.
+    and	a		; Same as CP 0 but faster.
+    ret	z		; Back behind the call print if A = 0
+    call	chput		; Call the routine to display a character.
+    inc	hl		; Increment the HL value.
+    jr	Print		; Relative jump to the address in the label Print.
     ret
 
 chput:
@@ -139,7 +139,7 @@ chput:
     ret
     
 Hello_TXT:			; Set the current address into label Hello_TXT. (text pointer)
-	db "Hello world!",10,0	; Zero indicates the end of text.
+    db "Hello world!",10,0	; Zero indicates the end of text.
 */
 
 
@@ -155,10 +155,10 @@ function wait(ms: number) {
     return new Promise<void>((res, rej) => setTimeout(() => res(), ms));
 }
 
-let z80: Z80|null = null;
+let z80: Z80 | null = null;
 
 async function reset() {
-    let response= await fetch('cbios_main_msx1.rom');
+    let response = await fetch('cbios_main_msx1.rom');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let romMemory = new Uint8Array(0x10000);
@@ -177,7 +177,7 @@ async function reset() {
 
             let logtext = document.createElement('div');
             logtext.classList.add('mnemonic');
-            logtext.innerText = str;            
+            logtext.innerText = str;
             div.appendChild(logtext);
 
             let indexes = ['AF', 'BC', 'DE', 'HL', 'SP', '_BC', '_DE', '_HL'];
@@ -188,11 +188,11 @@ async function reset() {
                 div.appendChild(d);
             });
 
-            let logger =  document.querySelector('#logger');
+            let logger = document.querySelector('#logger');
             if (logger) {
                 let maxLines = 1000;
                 let numOfRowsTooMany = logger.children.length - maxLines;
-                for(let i = 0; i < numOfRowsTooMany; i++) {
+                for (let i = 0; i < numOfRowsTooMany; i++) {
                     logger.removeChild(logger.children[i]);
                 }
                 logger.appendChild(div);
@@ -203,34 +203,34 @@ async function reset() {
 
     class IoBus implements IO {
         read8(address: number): number {
-            switch(address) {
+            switch (address) {
                 case 0x98:
                     return vdp.read(false);
                 case 0x99:
-                    return vdp.read(true); 
-                case 0xa8: 
-                    return slots.getSlotSelector();                
+                    return vdp.read(true);
+                case 0xa8:
+                    return slots.getSlotSelector();
                 default:
                     console.log(`Port read not implemented ${address.toString(16)}`);
                     return 0xff;
             }
         }
         write8(address: number, value: number): void {
-            switch(address) {
+            switch (address) {
                 case 0x98:
                     vdp.write(false, value);
                     break;
                 case 0x99:
-                    vdp.write(true, value); 
+                    vdp.write(true, value);
                     break;
-                case 0xa8: 
+                case 0xa8:
                     slots.setSlotSelector(value);
                     break;
                 default:
                     console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
             }
-        }   
+        }
     }
 
     let io = new IoBus();
@@ -240,13 +240,13 @@ async function reset() {
     let logger = new ScreenLogger();
 
     z80 = new Z80(slots, io, logger);
-    
+
     //while(1) {
     //}
 }
 
 reset().then(() => {
-    console.log(z80);    
+    console.log(z80);
 });
 
 let running = false;
@@ -256,8 +256,30 @@ function step(numOfSteps: number) {
 }
 
 window.onload = () => {
+    const canvas = <HTMLCanvasElement>document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx?.createImageData(256, 192);
+    if (imageData) {
+        // Iterate through every pixel
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            // Percentage in the x direction, times 255
+            let x = (i % 1024) / 1024 * 255;
+            // Percentage in the y direction, times 255
+            let y = Math.ceil(i / 1024) / 1024 * 255;
+
+            // Modify pixel data
+            imageData.data[i + 0] = x;        // R value
+            imageData.data[i + 1] = y;        // G value
+            imageData.data[i + 2] = 255 - x;  // B value
+            imageData.data[i + 3] = 255;      // A value
+        }
+
+        // Draw image data to the canvas
+        ctx?.putImageData(imageData, 0, 0);
+    }
+
     document.querySelector('#reset')?.addEventListener('click', () => {
-        reset();        
+        reset();
     });
 
     document.querySelector('#step1')?.addEventListener('click', () => {
@@ -271,10 +293,10 @@ window.onload = () => {
     document.querySelector('#step100')?.addEventListener('click', () => {
         step(100);
     });
-    
+
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
-        while(running) {
+        while (running) {
             step(100);
             await wait(10);
             if (!running) {
@@ -289,5 +311,5 @@ window.onload = () => {
 
     document.querySelector('#runBreak')?.addEventListener('click', async () => {
         z80?.executeUntil(0x22e);
-    });    
+    });
 }
