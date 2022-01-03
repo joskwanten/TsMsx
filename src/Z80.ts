@@ -32,7 +32,16 @@ const rp2_debug = ["BC", "DE", "HL", "AF"];
 const r = [B, C, D, E, H, L, HL, A];
 const r_debug = ["B", "C", "D", "E", "H", "L", "HL", "A"];
 const alu_debug = ["ADD A,", "ADC A,", "SUB ", "SBC A,", "AND", "XOR", "OR", "CP"];
-const rot = ["RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"];
+
+const ROT_RLC = 0;
+const ROT_RRC = 1;
+const ROT_RL = 2;
+const ROT_RR = 3;
+const ROT_SLA = 4;
+const ROT_SRA = 5;
+const ROT_SLL = 6;
+const ROT_SRL = 7;
+const rot_debug = ["RLC", "RRC", "RL", "RR", "SLA", "SRA", "SLL", "SRL"];
 
 const ALU_ADD_A = 0;
 const ALU_ADC_A = 1;
@@ -270,6 +279,31 @@ export class Z80 implements CPU {
     }
 
 
+    private Rotate(y: number, value: number): number {
+        switch(y) {
+            case ROT_RLC:
+                let result = value << 1;
+                result |= (result >> 9)
+                this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                return result
+                break;
+            case ROT_RRC:
+                break;
+            case ROT_RL:
+                break;
+            case ROT_RR:
+                break;
+            case ROT_SLA:
+                break;
+            case ROT_SRA:
+                break;
+            case ROT_SLL:
+                break;
+            case ROT_SRL:
+                break;
+        }
+    }
+
     private handleCBInstruction(log: boolean) {
         let addr = this.r16[PC] - 1; // CB already read
         let opcode = this.memory.uread8(this.r16[PC]++);
@@ -280,27 +314,55 @@ export class Z80 implements CPU {
 
         switch(x) {
             case 0: 
-                this.log(addr, `CB ROTATE COMMANDS NOT IMPLEMENTED ${y}, ${r_debug[z]}`);
+                this.log(addr, `NOT IMPLEMENTED ${rot_debug[y]}, ${r_debug[z]}`);
+                if (z == 6) {
+                    // (HL) handling
+                } else {
+
+                }
                 break;
             case 1: {
-                    this.log(addr, `BIT ${y}, ${r_debug[z]}`);
                     let mask = 1 << y;
-                    let val = this.r8[r[z]] & mask;
+                    let val = 0;
+                    if (z == 6) {
+                        // (HL) handling
+                        if (log) { this.log(addr, `BIT ${y}, (${r_debug[z]})`); }
+                        val = this.memory.uread8(this.r16[r[z]]) & mask;
+                    } else {
+                        // Register version
+                        this.log(addr, `BIT ${y}, ${r_debug[z]}`);
+                        val = this.r8[r[z]] & mask;
+                    }
+                
                     // CARRY is preserved in the BIT command, Half carry is set and the
                     // zero flag is inverted value of the bit which is tested
                     this.r8[F] = (this.r8[F] & FLAG_CARRY) | FLAG_HALF_CARRY | (val ? 0 : FLAG_ZERO);
                 }    
                 break;                
-            case 2: {
-                    this.log(addr, `RES ${y}, ${r_debug[z]}`);
+            case 2: {  
                     let mask = (~(1 << y)) & 0xff;
-                    this.r8[r[z]] = this.r8[r[z]] & mask;                    
+                    if (z == 6) {
+                        // (HL) handling
+                        if (log) { this.log(addr, `RES ${y}, (${r_debug[z]})`); }
+                        this.memory.uread8(this.memory.uread8(this.r16[r[z]]) & mask);
+                    } else {
+                        // Register version
+                        this.log(addr, `RES ${y}, ${r_debug[z]}`);
+                        this.r8[r[z]] = this.r8[r[z]] & mask;
+                    }                   
                 }
                 break;
             case 3: {
-                    this.log(addr, `SET ${y}, ${r_debug[z]}`);
                     let mask = (1 << y);
-                    this.r8[r[z]] = this.r8[r[z]] | mask;
+                    if (z == 6) {
+                        // (HL) handling
+                        if (log) { this.log(addr, `SET ${y}, (${r_debug[z]})`); }
+                        this.memory.uread8(this.memory.uread8(this.r16[r[z]]) | mask);
+                    } else {
+                        // Register version
+                        this.log(addr, `SET ${y}, ${r_debug[z]}`);
+                        this.r8[r[z]] = this.r8[r[z]] | mask;
+                    }
                 }
                 break;
         }
