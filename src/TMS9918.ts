@@ -77,6 +77,8 @@ export class TMS9918 {
     }
 
     read(mode: boolean): number {
+        this.hasLatchedData = false;
+    
         if (mode) {
             return this.vdpStatus;
         } else {
