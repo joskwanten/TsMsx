@@ -123,8 +123,8 @@ export class Z80 implements CPU {
         this.r16[PC] = 0;
         this.r16[SP] = 0;
     }
-    
-    
+
+
     execute(numOfInstructions: number, showLog: boolean) {
         for (let i = 0; i < numOfInstructions; i++) {
             this.fetchInstruction(showLog);
@@ -132,7 +132,7 @@ export class Z80 implements CPU {
     }
 
     executeUntil(breakPoint: number) {
-        while(1) {
+        while (1) {
             this.fetchInstruction(false);
             if (this.r16[PC] == breakPoint) {
                 return;
@@ -149,7 +149,7 @@ export class Z80 implements CPU {
     }
 
     cc(index: number): boolean {
-        switch(index) {        
+        switch (index) {
             case 0: // NZ
                 return (this.r8[F] & FLAG_ZERO) == 0;
                 break;
@@ -182,7 +182,7 @@ export class Z80 implements CPU {
 
     private log(address: number, msg: string): void {
         this.logger.debug(
-            ("000" + address.toString(16)).slice(-4) + " : " + msg, 
+            ("000" + address.toString(16)).slice(-4) + " : " + msg,
             this.dumpRegisters()
         );
 
@@ -219,7 +219,7 @@ export class Z80 implements CPU {
     }
 
     private flags8(result: number) {
-        this.r8[F] = 
+        this.r8[F] =
             // Copy sign , bit 5 and bit 3 (bit 5 and 3 behaviour is undocumented)
             (result & FLAG_SIGN_F3_F5) |
             // Zero flag
@@ -236,7 +236,7 @@ export class Z80 implements CPU {
 
     private ADC_A(n: number) {
         let carry = this.r8[F] & FLAG_CARRY ? 1 : 0;
-        this.rAlu[0]= (this.r8[A] + n + carry);
+        this.rAlu[0] = (this.r8[A] + n + carry);
         this.r8[A] = this.rAlu[0];
         this.flags8(this.rAlu[0]);
     }
@@ -279,29 +279,69 @@ export class Z80 implements CPU {
     }
 
 
-    private Rotate(y: number, value: number): number {
-        switch(y) {
+    private rotate(y: number, value: number): number {
+        switch (y) {
             case ROT_RLC:
-                let result = value << 1;
-                result |= (result >> 9)
-                this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
-                return result
-                break;
+                {
+                    let result = value << 1;
+                    result |= (result >> 8)
+                    this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_RRC:
-                break;
+                {
+                    let lsb = value & 1;
+                    let result = (value >> 1) | (lsb << 7);
+                    this.r8[F] = lsb ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_RL:
-                break;
+                {
+                    let result = value << 1;
+                    result |= this.r8[F] & FLAG_CARRY ? 1 : 0;
+                    this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_RR:
-                break;
+                {
+                    let lsb = value & 1;
+                    let result = (value >> 1);
+                    if (this.r8[F] | FLAG_CARRY) {
+                        result |= 0x80;
+                    }
+                    this.r8[F] = lsb ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_SLA:
-                break;
+                {
+                    let result = value << 1;
+                    this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_SRA:
-                break;
+                {
+                    let lsb = value & 1;
+                    let msb = value & 0x80;
+                    let result = (value >> 1) | msb;
+                    this.r8[F] = lsb ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_SLL:
-                break;
+                {
+                    let result = (value << 1) + 1;
+                    this.r8[F] = result & 0x100 ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
             case ROT_SRL:
-                break;
+                {
+                    let lsb = value & 1;
+                    let result = (value >> 1);
+                    this.r8[F] = lsb ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    return result;
+                }
         }
+
+        return 0;
     }
 
     private handleCBInstruction(log: boolean) {
@@ -312,58 +352,59 @@ export class Z80 implements CPU {
         let y = (opcode & 0x3F) >> 3;
         let z = (opcode & 0x07);
 
-        switch(x) {
-            case 0: 
+        switch (x) {
+            case 0:
                 this.log(addr, `NOT IMPLEMENTED ${rot_debug[y]}, ${r_debug[z]}`);
                 if (z == 6) {
                     // (HL) handling
+                    this.memory.uwrite8(this.r16[r[z]], this.rotate(y, this.memory.uread8(this.r16[r[z]])));
                 } else {
-
+                    this.r8[r[z]] = this.rotate(y, this.r8[r[z]]);
                 }
                 break;
             case 1: {
-                    let mask = 1 << y;
-                    let val = 0;
-                    if (z == 6) {
-                        // (HL) handling
-                        if (log) { this.log(addr, `BIT ${y}, (${r_debug[z]})`); }
-                        val = this.memory.uread8(this.r16[r[z]]) & mask;
-                    } else {
-                        // Register version
-                        this.log(addr, `BIT ${y}, ${r_debug[z]}`);
-                        val = this.r8[r[z]] & mask;
-                    }
-                
-                    // CARRY is preserved in the BIT command, Half carry is set and the
-                    // zero flag is inverted value of the bit which is tested
-                    this.r8[F] = (this.r8[F] & FLAG_CARRY) | FLAG_HALF_CARRY | (val ? 0 : FLAG_ZERO);
-                }    
-                break;                
-            case 2: {  
-                    let mask = (~(1 << y)) & 0xff;
-                    if (z == 6) {
-                        // (HL) handling
-                        if (log) { this.log(addr, `RES ${y}, (${r_debug[z]})`); }
-                        this.memory.uread8(this.memory.uread8(this.r16[r[z]]) & mask);
-                    } else {
-                        // Register version
-                        this.log(addr, `RES ${y}, ${r_debug[z]}`);
-                        this.r8[r[z]] = this.r8[r[z]] & mask;
-                    }                   
+                let mask = 1 << y;
+                let val = 0;
+                if (z == 6) {
+                    // (HL) handling
+                    if (log) { this.log(addr, `BIT ${y}, (${r_debug[z]})`); }
+                    val = this.memory.uread8(this.r16[r[z]]) & mask;
+                } else {
+                    // Register version
+                    this.log(addr, `BIT ${y}, ${r_debug[z]}`);
+                    val = this.r8[r[z]] & mask;
                 }
+
+                // CARRY is preserved in the BIT command, Half carry is set and the
+                // zero flag is inverted value of the bit which is tested
+                this.r8[F] = (this.r8[F] & FLAG_CARRY) | FLAG_HALF_CARRY | (val ? 0 : FLAG_ZERO);
+            }
+                break;
+            case 2: {
+                let mask = (~(1 << y)) & 0xff;
+                if (z == 6) {
+                    // (HL) handling
+                    if (log) { this.log(addr, `RES ${y}, (${r_debug[z]})`); }
+                    this.memory.uwrite8(this.r16[r[z]], this.memory.uread8(this.r16[r[z]]) & mask);
+                } else {
+                    // Register version
+                    this.log(addr, `RES ${y}, ${r_debug[z]}`);
+                    this.r8[r[z]] = this.r8[r[z]] & mask;
+                }
+            }
                 break;
             case 3: {
-                    let mask = (1 << y);
-                    if (z == 6) {
-                        // (HL) handling
-                        if (log) { this.log(addr, `SET ${y}, (${r_debug[z]})`); }
-                        this.memory.uread8(this.memory.uread8(this.r16[r[z]]) | mask);
-                    } else {
-                        // Register version
-                        this.log(addr, `SET ${y}, ${r_debug[z]}`);
-                        this.r8[r[z]] = this.r8[r[z]] | mask;
-                    }
+                let mask = (1 << y);
+                if (z == 6) {
+                    // (HL) handling
+                    if (log) { this.log(addr, `SET ${y}, (${r_debug[z]})`); }
+                    this.memory.uwrite8(this.r16[r[z]], this.memory.uread8(this.r16[r[z]]) | mask);
+                } else {
+                    // Register version
+                    this.log(addr, `SET ${y}, ${r_debug[z]}`);
+                    this.r8[r[z]] = this.r8[r[z]] | mask;
                 }
+            }
                 break;
         }
 
@@ -374,8 +415,8 @@ export class Z80 implements CPU {
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
         //this.log(addr, `Opcode: ${opcode.toString(16)}`);
-        
-        if(opcode === 0xDD || opcode === 0xED || opcode === 0xFD) {
+
+        if (opcode === 0xDD || opcode === 0xED || opcode === 0xFD) {
 
         }
 
@@ -494,15 +535,15 @@ export class Z80 implements CPU {
             }
 
             if (z === 7) {
-                switch(y) {
+                switch (y) {
                     case 0: // RLCA
-                    {
-                        if (log) { this.log(addr, 'RLCA'); }
-                        let result = this.r8[A] << 1;                        
-                        this.r8[F] = result & 0x100 ? FLAG_CARRY : 0;
-                        this.r8[A] = (result & 0xFF) | (result & 0x100 ? 1 : 0);
-                        break;
-                    }
+                        {
+                            if (log) { this.log(addr, 'RLCA'); }
+                            let result = this.r8[A] << 1;
+                            this.r8[F] = result & 0x100 ? FLAG_CARRY : 0;
+                            this.r8[A] = (result & 0xFF) | (result & 0x100 ? 1 : 0);
+                            break;
+                        }
                     case 1: // RRCA
                         if (log) { this.log(addr, 'RRCA NOT IMPLEMENTED'); }
                         break;
@@ -519,12 +560,12 @@ export class Z80 implements CPU {
                         //this.log(addr, 'DAA');
                         break;
                     case 5:	// CPL
-                    {
-                        if (log) { this.log(addr, 'CPL'); }
-                        this.r8[A] = ~this.r8[A]; 
-                        this.r8[F] = this.r8[F] | FLAG_HALF_CARRY | FLAG_ADDSUB;
-                        break;            
-                    }            
+                        {
+                            if (log) { this.log(addr, 'CPL'); }
+                            this.r8[A] = ~this.r8[A];
+                            this.r8[F] = this.r8[F] | FLAG_HALF_CARRY | FLAG_ADDSUB;
+                            break;
+                        }
                     case 6:	// SCF    
                         if (log) { this.log(addr, 'SCF NOT IMPLEMENTED'); }
                         //this.log(addr, 'SCF');
@@ -534,7 +575,7 @@ export class Z80 implements CPU {
                         //this.log(addr, 'CCF');
                         break;
                 }
-                
+
             }
 
         }
@@ -582,14 +623,14 @@ export class Z80 implements CPU {
             }
 
             if (z === 1) {
-                if (q === 0) {                    
+                if (q === 0) {
                     if (log) { this.log(addr, `POP ${rp2_debug[p]}`); }
                     this.r16[rp2[p]] = this.memory.uread16(this.r16[SP]);
                     this.r16[SP] += 2;
                 } else {
-                    switch(p) {
+                    switch (p) {
                         case 0:
-                            if (log) {  this.log(addr, 'RET'); }
+                            if (log) { this.log(addr, 'RET'); }
                             this.r16[PC] = this.memory.uread16(this.r16[SP]);
                             this.r16[SP] += 2;
                             break;
@@ -632,9 +673,9 @@ export class Z80 implements CPU {
 
             if (z === 3) {
                 let n;
-                switch(y) {
+                switch (y) {
                     case 0: //	JP nn
-                        let nn = this.memory.uread16(this.r16[PC])                        
+                        let nn = this.memory.uread16(this.r16[PC])
                         if (log) { this.log(addr, `JP ${this.hex16(nn)}`); }
                         this.r16[PC] = nn;
                         break;
@@ -645,15 +686,15 @@ export class Z80 implements CPU {
                     case 2:	//OUT (n), A
                         n = this.memory.uread8(this.r16[PC]++);
                         if (log) { this.log(addr, `OUT (0x${n.toString(16)}), A`); }
-                        this.IO.write8(n, this.r8[A]);                       
+                        this.IO.write8(n, this.r8[A]);
                         break;
                     case 3:	//IN A, (n)
                         n = this.memory.uread8(this.r16[PC]++);
                         if (log) { this.log(addr, `IN A,(0x${n.toString(16)})`); }
-                        this.r8[A] = this.IO.read8(n);                     
+                        this.r8[A] = this.IO.read8(n);
                         break;
                     case 4: //EX (SP), HL 
-                        if (log) { this.log(addr, `EX (SP), HL`); }                  
+                        if (log) { this.log(addr, `EX (SP), HL`); }
                         let sp = this.memory.uread16(this.r16[SP]);
                         this.memory.uwrite16(this.r16[SP], this.r16[HL]);
                         this.r16[HL] = sp;
@@ -662,7 +703,7 @@ export class Z80 implements CPU {
                         if (log) { this.log(addr, `EX DE, HL`); }
                         let de = this.r16[DE];
                         this.r16[DE] = this.r16[HL];
-                        this.r16[HL] = de;                        
+                        this.r16[HL] = de;
                         break;
                     case 6:	//DI
                         if (log) { this.log(addr, `DI`); }
@@ -679,7 +720,7 @@ export class Z80 implements CPU {
                 // TODO: incorrect
                 let nn = this.memory.uread16(this.r16[PC]++)
                 this.r16[PC]++;
-                if (log) {  this.log(addr, `CALL ${this.hex16(nn)}`); }
+                if (log) { this.log(addr, `CALL ${this.hex16(nn)}`); }
             }
 
             if (z === 5) {
@@ -690,12 +731,12 @@ export class Z80 implements CPU {
                     this.memory.uwrite16(this.r16[SP], this.r16[rp2[p]]);
                 } else {
                     if (p === 0) {
-                        
-                        let nn = this.memory.uread16(this.r16[PC])                                                
+
+                        let nn = this.memory.uread16(this.r16[PC])
                         this.r16[PC] += 2;
                         this.r16[SP] -= 2;
                         this.memory.uwrite16(this.r16[SP], this.r16[PC]);
-                                                                    
+
                         this.log(addr, `CALL ${this.hex16(nn)}`);
                         this.r16[PC] = nn;
 
@@ -706,7 +747,7 @@ export class Z80 implements CPU {
                     } else if (p === 3) {
 
                     }
-                    
+
                 }
             }
 
