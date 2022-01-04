@@ -410,13 +410,63 @@ export class Z80 implements CPU {
 
     }
 
+    private handleEDInstruction(log: boolean) {
+        let edAddr = this.r16[PC] - 1; // CB already read
+        let opcode = this.memory.uread8(this.r16[PC]++);
+
+        let x = opcode >> 6;
+        let y = (opcode & 0x3F) >> 3;
+        let z = (opcode & 0x07);
+
+        switch (z) {
+            case 0: 
+                if (y !== 6) {
+                    // IN r[y], (C)
+                    if (log) { this.log(edAddr, `IN ${r8_debug[y]},(C)`); }
+                    this.r8[A] = this.IO.read8(this.r8[r[y]]);
+                    this.flags8(this.r8[A]);
+                    // TODO: CHECK FLAGS
+                    
+                } else {
+                    // IN (C)
+                    if (log) { this.log(edAddr, `IN (C) NOT IMPLEMENTED`); }
+                }
+                break;
+            case 1: 
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 2:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 3:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 4:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 5:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 6:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+            case 7:
+                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                break;
+        }
+    }
+
     private fetchInstruction(log: boolean) {
         //this.dumpRegisters();
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
         //this.log(addr, `Opcode: ${opcode.toString(16)}`);
 
-        if (opcode === 0xDD || opcode === 0xED || opcode === 0xFD) {
+        if (opcode === 0xED) {
+            return this.handleEDInstruction(log);
+        }
+
+        if (opcode === 0xDD || opcode === 0xFD) {
 
         }
 
@@ -692,6 +742,7 @@ export class Z80 implements CPU {
                         n = this.memory.uread8(this.r16[PC]++);
                         if (log) { this.log(addr, `IN A,(0x${n.toString(16)})`); }
                         this.r8[A] = this.IO.read8(n);
+                        // TODO: CHECK FLAGS
                         break;
                     case 4: //EX (SP), HL 
                         if (log) { this.log(addr, `EX (SP), HL`); }
@@ -725,7 +776,6 @@ export class Z80 implements CPU {
 
             if (z === 5) {
                 if (q === 0) {
-                    // TODO: implement;
                     if (log) { this.log(addr, `PUSH ${rp2_debug[p]}`); }
                     this.r16[SP] -= 2;
                     this.memory.uwrite16(this.r16[SP], this.r16[rp2[p]]);
