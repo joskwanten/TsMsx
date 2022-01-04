@@ -125,10 +125,13 @@ export class Z80 implements CPU {
     }
 
 
-    execute(numOfInstructions: number, showLog: boolean) {
+    execute(numOfInstructions: number, showLog: boolean): number {
+        let tStates = 0;
         for (let i = 0; i < numOfInstructions; i++) {
-            this.fetchInstruction(showLog);
+            tStates += this.fetchInstruction(showLog);
         }
+
+        return tStates;
     }
 
     executeUntil(breakPoint: number) {
@@ -410,56 +413,100 @@ export class Z80 implements CPU {
 
     }
 
-    private handleEDInstruction(log: boolean) {
+    private handleEDInstruction(log: boolean): number {
         let edAddr = this.r16[PC] - 1; // CB already read
         let opcode = this.memory.uread8(this.r16[PC]++);
+        let tStates = 0;
 
         let x = opcode >> 6;
         let y = (opcode & 0x3F) >> 3;
         let z = (opcode & 0x07);
 
-        switch (z) {
-            case 0: 
-                if (y !== 6) {
-                    // IN r[y], (C)
-                    if (log) { this.log(edAddr, `IN ${r8_debug[y]},(C)`); }
-                    this.r8[A] = this.IO.read8(this.r8[r[y]]);
-                    this.flags8(this.r8[A]);
-                    // TODO: CHECK FLAGS
-                    
-                } else {
-                    // IN (C)
-                    if (log) { this.log(edAddr, `IN (C) NOT IMPLEMENTED`); }
-                }
-                break;
-            case 1: 
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 2:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 3:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 4:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 5:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 6:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
-            case 7:
-                if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                break;
+        if (x === 1) {
+            switch (z) {
+                case 0:
+                    if (y !== 6) {
+                        // IN r[y], (C)
+                        if (log) { this.log(edAddr, `IN ${r8_debug[y]},(C)`); }
+                        this.r8[A] = this.IO.read8(this.r8[r[y]]);
+                        this.flags8(this.r8[A]);
+
+                        // TODO: CHECK FLAGS
+
+                    } else {
+                        // IN (C)
+                        if (log) { this.log(edAddr, `IN (C) NOT IMPLEMENTED`); }
+                    }
+                    break;
+                case 1:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 2:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 3:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 4:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 5:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 6:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+                case 7:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+            }
+        } else if (x === 2) {
+            switch (z) {
+                case 0:
+                    // OUT instructions
+                    switch (y) {
+                        case 0:
+                            if (log) { this.log(edAddr, `OUTI`); }
+                            this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
+                            this.r16[HL]++;
+                            this.r8[B]--;
+                            this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
+                            if (this.r8[B]) {
+                                this.r8[F] &= ~FLAG_ZERO;
+                            } else {
+                                this.r8[F] |= FLAG_ZERO;
+                            }
+                            break;
+                        case 1:
+                            break;
+                        case 2:
+                            break;
+                        case 3:
+                            break;
+                    }
+                    break;
+
+                case 1:
+
+                    break;
+
+                case 2:
+                    break;
+
+                case 3:
+                    break;
+            }
+
         }
+
+        return tStates;
     }
 
-    private fetchInstruction(log: boolean) {
+    private fetchInstruction(log: boolean): number {
         //this.dumpRegisters();
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
+        let tStates = 0; // Number of TStates the operation took
         //this.log(addr, `Opcode: ${opcode.toString(16)}`);
 
         if (opcode === 0xED) {
@@ -812,6 +859,8 @@ export class Z80 implements CPU {
                 this.r16[PC] = (y * 8) & 0xFF;
             }
         }
+
+        return tStates;
     }
 
     private aluOperation(y: number, n: number) {
