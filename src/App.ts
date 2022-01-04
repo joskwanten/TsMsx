@@ -310,6 +310,6 @@ window.onload = () => {
     });
 
     document.querySelector('#runBreak')?.addEventListener('click', async () => {
-        z80?.executeUntil(0x0d8b);
+        z80?.executeUntil(0x1034);
     });
 }
