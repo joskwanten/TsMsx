@@ -310,7 +310,15 @@ window.onload = () => {
     });
 
     document.querySelector('#runBreak')?.addEventListener('click', async () => {
-        z80?.executeUntil(0x1034); // 0x280 ret verder onderzoeken
+        // 0x0d86 - Just before User Interface
+        // 0x0d91 - Call to init_vdp
+        // 0x0d94 - Returned from init_vdp (Hangs now)
+        // 0x074d - init_vdp
+        // 0x026d - init_vdp -> filvrm
+        // 0x0280 - ret filvrm
+        // 0x0260 - setwrt
+        // 0x07a3 - call 0x0297 (ldirvm)
+        z80?.executeUntil(0x02a1); // 0x280 ret verder onderzoeken
 
         //
     });

@@ -462,10 +462,10 @@ export class Z80 implements CPU {
             }
         } else if (x === 2) {
             switch (z) {
-                case 0:
+                case 3:
                     // OUT instructions
                     switch (y) {
-                        case 0:
+                        case 4:
                             if (log) { this.log(edAddr, `OUTI`); }
                             this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
                             this.r16[HL]++;
@@ -478,22 +478,27 @@ export class Z80 implements CPU {
                             }
                             break;
                         case 1:
+                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                             break;
                         case 2:
+                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                             break;
                         case 3:
+                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                             break;
                     }
                     break;
 
-                case 1:
-
-                    break;
-
                 case 2:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
 
-                case 3:
+                case 1:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    break;
+
+                case 1:
+                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
             }
 
