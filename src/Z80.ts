@@ -519,7 +519,7 @@ export class Z80 implements CPU {
         }
 
         if (opcode === 0xDD || opcode === 0xFD) {
-
+            console.error("INSTRUCTION NOT HANDLED");
         }
 
         let x = opcode >> 6;
