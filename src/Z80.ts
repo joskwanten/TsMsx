@@ -463,29 +463,34 @@ export class Z80 implements CPU {
         } else if (x === 2) {
             switch (z) {
                 case 3:
-                    // OUT instructions
-                    switch (y) {
-                        case 4:
-                            if (log) { this.log(edAddr, `OUTI`); }
+                    {
+                        if (log && y === 4) { this.log(edAddr, `OUTI`); }
+                        else if (log && y === 5) { this.log(edAddr, `OUTD`); }
+                        else if (log && y === 6) { this.log(edAddr, `OTIR`); }
+                        else if (log && y === 7) { this.log(edAddr, `OTDR`); }
+
+                        // OTIR and OTID are the same instructions as OUTI and OUTD
+                        // but only repeat until register D is zero.
+                        let repeat = y === 6 || y == 7 ? this.r8[B] : 1;
+                        let inc = y === 4 || y == 6;
+
+                        for (let i = 0; i < repeat; i++) {
                             this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
-                            this.r16[HL]++;
-                            this.r8[B]--;
-                            this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
-                            if (this.r8[B]) {
-                                this.r8[F] &= ~FLAG_ZERO;
+
+                            if (inc) {
+                                this.r16[HL]++;
                             } else {
-                                this.r8[F] |= FLAG_ZERO;
+                                this.r16[HL]++;
                             }
-                            break;
-                        case 1:
-                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                            break;
-                        case 2:
-                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                            break;
-                        case 3:
-                            if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                            break;
+                            this.r8[B]--;
+                        }
+
+                        this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
+                        if (this.r8[B]) {
+                            this.r8[F] &= ~FLAG_ZERO;
+                        } else {
+                            this.r8[F] |= FLAG_ZERO;
+                        }
                     }
                     break;
 
