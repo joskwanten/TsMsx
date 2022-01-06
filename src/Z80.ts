@@ -502,8 +502,36 @@ export class Z80 implements CPU {
                     if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
 
-                case 1:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                case 0:
+                    {
+                        if (log && y === 4) { this.log(edAddr, `LDI`); }
+                        else if (log && y === 5) { this.log(edAddr, `LDD`); }
+                        else if (log && y === 6) { this.log(edAddr, `LDIR`); }
+                        else if (log && y === 7) { this.log(edAddr, `LDDR`); }
+
+                        // LDIR and LDDR are the same instructions as OUTI and OUTD
+                        // but only repeat until register D is zero.
+                        let repeat = y === 6 || y == 7 ? this.r16[BC] : 1;
+                        let inc = y === 4 || y == 6;
+
+                        for (let i = 0; i < repeat; i++) {
+                            this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
+
+                            if (inc) {
+                                this.r16[HL]++;
+                            } else {
+                                this.r16[HL]++;
+                            }
+                            this.r8[B]--;
+                        }
+
+                        this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
+                        if (this.r8[B]) {
+                            this.r8[F] &= ~FLAG_ZERO;
+                        } else {
+                            this.r8[F] |= FLAG_ZERO;
+                        }
+                    }
                     break;
             }
 
@@ -514,6 +542,9 @@ export class Z80 implements CPU {
 
     private fetchInstruction(log: boolean): number {
         //this.dumpRegisters();
+        if (!this.r16[PC]) {
+            console.log("DEVICE (RE)STARTED");
+        }
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
         let tStates = 0; // Number of TStates the operation took

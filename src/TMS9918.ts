@@ -70,6 +70,7 @@ export class TMS9918 {
                 }
             }
         } else {
+            this.hasLatchedData = true;
             // Mode = 0 means writing to video memory
             this.vram[this.vramAddress] = value;
             this.vramAddress = (this.vramAddress + 1) % 16384;

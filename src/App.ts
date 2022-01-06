@@ -219,6 +219,7 @@ async function reset() {
             switch (address) {
                 case 0x98:
                     vdp.write(false, value);
+                    console.count("vdp write");
                     break;
                 case 0x99:
                     vdp.write(true, value);
@@ -251,8 +252,8 @@ reset().then(() => {
 
 let running = false;
 
-function step(numOfSteps: number) {
-    z80?.execute(numOfSteps, true);
+function step(numOfSteps: number, log = true) {
+    z80?.execute(numOfSteps, log);
 }
 
 window.onload = () => {
@@ -297,7 +298,7 @@ window.onload = () => {
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
         while (running) {
-            step(100);
+            step(100, false);
             await wait(10);
             if (!running) {
                 return;
