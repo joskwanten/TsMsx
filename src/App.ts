@@ -219,7 +219,7 @@ async function reset() {
             switch (address) {
                 case 0x98:
                     vdp.write(false, value);
-                    console.count("vdp write");
+                    //console.count("vdp write");
                     break;
                 case 0x99:
                     vdp.write(true, value);
@@ -323,7 +323,7 @@ window.onload = () => {
         // 0x0da6 - call 0x23bf (rdslt)
         // 0x0daf - just before some ix commands (logo_none:)
         // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x0dc9); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x058c); // 0x280 ret verder onderzoeken
 
         //
     });

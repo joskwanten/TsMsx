@@ -421,6 +421,8 @@ export class Z80 implements CPU {
         let x = opcode >> 6;
         let y = (opcode & 0x3F) >> 3;
         let z = (opcode & 0x07);
+        let p = (opcode & 0x30) >> 4;
+        let q = (opcode & 0x08) >> 3;
 
         if (x === 1) {
             switch (z) {
@@ -445,8 +447,20 @@ export class Z80 implements CPU {
                     if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
                 case 3:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
-                    break;
+                    {
+                        let nn = this.memory.uread16(this.r16[PC]);
+                        this.r16[PC] += 2;
+
+                        if (q === 0) {
+                            if (log) { this.log(edAddr, `LD ($${nn.toString(16)}), ${rp_debug[p]}`) };
+                            this.memory.uwrite16(nn, this.r16[rp[p]]);
+                        } else {
+                            if (log) { this.log(edAddr, `LD ${rp_debug[p]}, ($${nn.toString(16)})`) };
+                            this.r16[rp[p]] = this.memory.uread16(nn);
+                        }
+
+                        break;
+                    }
                 case 4:
                     if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
@@ -545,6 +559,9 @@ export class Z80 implements CPU {
         if (!this.r16[PC]) {
             console.log("DEVICE (RE)STARTED");
         }
+        // else {
+        //     console.log(this.r16[PC].toString(16));
+        // }
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
         let tStates = 0; // Number of TStates the operation took
@@ -768,7 +785,7 @@ export class Z80 implements CPU {
                 } else {
                     switch (p) {
                         case 0:
-                            if (log) { this.log(addr, 'RET'); }
+                            if (true) { this.log(addr, `RET PC=${this.memory.uread16(this.r16[SP]).toString(16)}`); }
                             this.r16[PC] = this.memory.uread16(this.r16[SP]);
                             this.r16[SP] += 2;
                             break;
