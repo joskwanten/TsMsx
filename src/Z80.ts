@@ -1,7 +1,9 @@
+import { Ram } from './Ram';
 import { Logger, Registers } from './Logger';
 import { CPU } from "./CPU";
 import { IO } from "./IO";
 import { Memory } from "./Memory";
+import { throws } from 'assert';
 
 const A = 1;
 const F = 0;
@@ -11,6 +13,10 @@ const D = 5;
 const E = 4;
 const H = 7;
 const L = 6;
+const IXH = 9;
+const IXL = 8;
+const IYH = 11;
+const IYL = 10;
 const r8_debug = ["F", "A", "C", "B", "E", "D", "L", "H"];
 const r16_debug = ["AF", "BC", "DE", "HL", "IX", "IY", "SP", "_I", "_R", "PC", "_F"];
 
@@ -28,10 +34,44 @@ const _F = 10;
 const rp = [BC, DE, HL, SP];
 const rp_debug = ["BC", "DE", "HL", "SP"];
 const rp2 = [BC, DE, HL, AF];
+const rp2_dd = [BC, DE, IX, AF];
+const rp2_fd = [BC, DE, IY, AF];
 const rp2_debug = ["BC", "DE", "HL", "AF"];
+const rp2_debug_dd = ["BC", "DE", "IX", "AF"];
+const rp2_debug_fd = ["BC", "DE", "IY", "AF"];
 const r = [B, C, D, E, H, L, HL, A];
+const r_dd = [B, C, D, E, IXH, IXL, HL, A];
+const r_fd = [B, C, D, E, IYH, IYL, HL, A];
 const r_debug = ["B", "C", "D", "E", "H", "L", "HL", "A"];
+const r_debug_dd = ["B", "C", "D", "E", "IXH", "IXL", "HL", "A"];
+const r_debug_fd = ["B", "C", "D", "E", "IYH", "IYL", "HL", "A"];
+
 const alu_debug = ["ADD A,", "ADC A,", "SUB ", "SBC A,", "AND", "XOR", "OR", "CP"];
+
+
+let r_dd_fd: any = {
+    0x00: r,
+    0xdd: r_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: r_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
+
+let r_debug_dd_fd: any = {
+    0x00: r_debug,      // Normal instructions
+    0xdd: r_debug_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: r_debug_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
+
+let rp2_dd_fd: any = {
+    0x00: rp2,      // Normal instructions
+    0xdd: rp2_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: rp2_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
+
+let rp2_debug_dd_fd: any = {
+    0x00: rp2_debug,      // Normal instructions
+    0xdd: rp2_debug_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: rp2_debug_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
 
 const ROT_RLC = 0;
 const ROT_RRC = 1;
@@ -60,6 +100,18 @@ const FLAG_OVERFLOW = 0b00000100;
 const FLAG_ADDSUB = 0b00000010;
 const FLAG_CARRY = 0b00000001;
 const FLAGS_ADD_AFFECTED = 0b00111011;
+
+enum Flags {
+    S = 0b10000000,
+    Z = 0b01000000,
+    F5 = 0b00100000,
+    H = 0b00010000,
+    F3 = 0b00001000,
+    PV = 0b00000100,
+    N = 0b00000010,
+    C = 0b00000001,
+}
+
 
 const cc_debug = ["NZ", "Z", "NC", "C", "PO", "PE", "P", "M"];
 
@@ -91,6 +143,17 @@ export class Z80 implements CPU {
 
     // Interrupts are enabled at startup
     Interrupts: boolean = true;
+
+    // Number of T-States executed
+    tStates: number = 0;
+
+    // Interrupt flags 
+    iff1 = true;
+    iff2 = true;
+
+    // flag to indicate if the CPU is halted
+    halted = false;
+
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
 
@@ -125,13 +188,10 @@ export class Z80 implements CPU {
     }
 
 
-    execute(numOfInstructions: number, showLog: boolean): number {
-        let tStates = 0;
+    execute(numOfInstructions: number, showLog: boolean) {
         for (let i = 0; i < numOfInstructions; i++) {
-            tStates += this.fetchInstruction(showLog);
+            this.fetchInstruction(showLog);
         }
-
-        return tStates;
     }
 
     executeUntil(breakPoint: number) {
@@ -219,6 +279,33 @@ export class Z80 implements CPU {
         this.r8[A] = this.rAlu[0];
         // TODO sign stuff correct?     
         this.flags8(this.rAlu[0]);
+    }
+
+    private set_flags(...flaglist: Flags[]) {
+        flaglist.forEach(f => this.r8[F] |= f);
+    }
+
+    private reset_flags(...flaglist: Flags[]) {
+        flaglist.forEach(f => this.r8[F] &= ~f);
+    }
+
+    private set_parity(val: number) {
+        let sum = 0;
+        for (let i = 0; i < 8; i++) {
+            sum += (val >> i) && 1;
+        }
+
+        // Parity bit is set when parity is even
+        this.toggle_flag(Flags.PV, (sum & 0x1) == 0);
+    }
+
+
+    private toggle_flag(flag: Flags, set: boolean) {
+        if (set) {
+            this.r8[F] &= flag;
+        } else {
+            this.r8[F] != flag;
+        }
     }
 
     private flags8(result: number) {
@@ -339,7 +426,9 @@ export class Z80 implements CPU {
                 {
                     let lsb = value & 1;
                     let result = (value >> 1);
+                    // S, H, and N flags reset, Z if result is zero, P/V set if parity is even, C from bit 0.
                     this.r8[F] = lsb ? (this.r8[F] | FLAG_CARRY) : (this.r8[F] & ~(FLAG_CARRY));
+                    // TODO: Flags nog correct implmenented
                     return result;
                 }
         }
@@ -357,11 +446,12 @@ export class Z80 implements CPU {
 
         switch (x) {
             case 0:
-                this.log(addr, `NOT IMPLEMENTED ${rot_debug[y]}, ${r_debug[z]}`);
                 if (z == 6) {
                     // (HL) handling
+                    this.log(addr, `${rot_debug[y]}  (${r_debug[z]})`);
                     this.memory.uwrite8(this.r16[r[z]], this.rotate(y, this.memory.uread8(this.r16[r[z]])));
                 } else {
+                    this.log(addr, `${rot_debug[y]}  ${r_debug[z]}`);
                     this.r8[r[z]] = this.rotate(y, this.r8[r[z]]);
                 }
                 break;
@@ -416,7 +506,6 @@ export class Z80 implements CPU {
     private handleEDInstruction(log: boolean): number {
         let edAddr = this.r16[PC] - 1; // CB already read
         let opcode = this.memory.uread8(this.r16[PC]++);
-        let tStates = 0;
 
         let x = opcode >> 6;
         let y = (opcode & 0x3F) >> 3;
@@ -429,22 +518,29 @@ export class Z80 implements CPU {
                 case 0:
                     if (y !== 6) {
                         // IN r[y], (C)
-                        if (log) { this.log(edAddr, `IN ${r8_debug[y]},(C)`); }
-                        this.r8[A] = this.IO.read8(this.r8[r[y]]);
-                        this.flags8(this.r8[A]);
-
-                        // TODO: CHECK FLAGS
+                        if (log) { this.log(edAddr, `IN ${r_debug[y]}, (C)`); }
+                        this.r8[r[y]] = this.IO.read8(this.r8[C]);
+                        this.reset_flags(Flags.N);
+                        this.set_parity(this.r8[r[y]]);
+                        this.tStates += 12;
+                        // N flag reset, P/V represents parity, C flag preserved, all other flags affected by definition.
 
                     } else {
                         // IN (C)
-                        if (log) { this.log(edAddr, `IN (C) NOT IMPLEMENTED`); }
+                        if (true) { this.log(edAddr, `IN (C) NOT IMPLEMENTED UNDOCUMENTED`); }
                     }
                     break;
                 case 1:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    // OUT (C), r[y]
+                    if (log && y != 6) { this.log(edAddr, `OUT (C), ${r_debug[y]}`); }
+                    if (log && y == 6) { this.log(edAddr, `OUT (C), 0`); }
+                    let val = y == 6 ? 0 : this.r8[r[y]];
+                    this.IO.write8(this.r8[C], val);
+                    this.tStates += 12;
+                    // All flags preserved
                     break;
                 case 2:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
                 case 3:
                     {
@@ -462,16 +558,19 @@ export class Z80 implements CPU {
                         break;
                     }
                 case 4:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (log) { this.log(edAddr, `NEG`); }
+                    this.r8[A] = -this.r8[A];
+                    this.set_flags(Flags.N);
+                    this.toggle_flag(Flags.Z, this.r8[A] == 0);
                     break;
                 case 5:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
                 case 6:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
                 case 7:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
             }
         } else if (x === 2) {
@@ -509,11 +608,11 @@ export class Z80 implements CPU {
                     break;
 
                 case 2:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
 
                 case 1:
-                    if (log) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
                     break;
 
                 case 0:
@@ -551,11 +650,15 @@ export class Z80 implements CPU {
 
         }
 
-        return tStates;
+        return this.tStates;
     }
 
-    private fetchInstruction(log: boolean): number {
+    private fetchInstruction(log: boolean) {
         //this.dumpRegisters();
+        if (this.halted) {
+            return;
+        }
+
         if (!this.r16[PC]) {
             console.log("DEVICE (RE)STARTED");
         }
@@ -564,15 +667,18 @@ export class Z80 implements CPU {
         // }
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);
+        let opcodeMode = 0;
         let tStates = 0; // Number of TStates the operation took
         //this.log(addr, `Opcode: ${opcode.toString(16)}`);
 
-        if (opcode === 0xED) {
-            return this.handleEDInstruction(log);
+        // TODO: support more 0xDD or 0xFD opcodes and use the last one as
+        if (opcode === 0xDD || opcode === 0xFD) {
+            opcodeMode = opcode;
+            opcode = this.memory.uread8(this.r16[PC]++);
         }
 
-        if (opcode === 0xDD || opcode === 0xFD) {
-            console.error("INSTRUCTION NOT HANDLED");
+        if (opcode === 0xED) {
+            return this.handleEDInstruction(log);
         }
 
         let x = opcode >> 6;
@@ -695,12 +801,20 @@ export class Z80 implements CPU {
                         {
                             if (log) { this.log(addr, 'RLCA'); }
                             let result = this.r8[A] << 1;
-                            this.r8[F] = result & 0x100 ? FLAG_CARRY : 0;
-                            this.r8[A] = (result & 0xFF) | (result & 0x100 ? 1 : 0);
-                            break;
+                            let carry = (result & 0x100) > 0;
+                            this.r8[A] = result | (carry ? 1 : 0);
+                            this.toggle_flag(Flags.C, carry);
+                            this.reset_flags(Flags.H, Flags.N);
                         }
+                        break;
                     case 1: // RRCA
-                        if (log) { this.log(addr, 'RRCA NOT IMPLEMENTED'); }
+                        {
+                            if (log) { this.log(addr, 'RRCA'); }
+                            let carry = (this.r8[A] & 1) === 1;
+                            this.r8[A] = (this.r8[A] >> 1) | (carry ? 0x80 : 0);
+                            this.toggle_flag(Flags.C, carry);
+                            this.reset_flags(Flags.H, Flags.N);
+                        }
                         break;
                     case 2: // RLA
                         if (log) { this.log(addr, 'RLA NOT IMPLEMENTED'); }
@@ -722,11 +836,12 @@ export class Z80 implements CPU {
                             break;
                         }
                     case 6:	// SCF    
-                        if (log) { this.log(addr, 'SCF NOT IMPLEMENTED'); }
-                        //this.log(addr, 'SCF');
+                        if (log) { this.log(addr, 'SCF'); }
+                        this.set_flags(Flags.C);
+                        this.reset_flags(Flags.H, Flags.N);
                         break;
                     case 7:	// CCF
-                        if (log) { this.log(addr, 'CCF NOT IMPLEMENTED'); }
+                        if (true) { this.log(addr, 'CCF NOT IMPLEMENTED'); }
                         //this.log(addr, 'CCF');
                         break;
                 }
@@ -738,12 +853,17 @@ export class Z80 implements CPU {
         if (x === 1) {
             if (z === 6 && y === 6) {
                 if (log) { this.log(addr, "HALT"); }
-                this.r16[PC]--;
-                this.halt();
+                this.halted = true;
+                // Go to the halted state, when an interrupt occurs,
+                // the PC can be pushed on the stack and operation will continue
+                //this.r16[PC]--;
             } else {
                 if (y == 6) {
                     if (log) { this.log(addr, `LD (${r_debug[y]}), ${r_debug[z]}`); }
                     this.memory.uwrite8(this.r16[r[y]], this.r8[r[z]]);
+                } else if (z == 6) {
+                    if (log) { this.log(addr, `LD ${r_debug[y]}, (${r_debug[z]})`); }
+                    this.r8[r[y]] = this.memory.uread8(this.r16[r[z]]);
                 } else {
                     if (log) { this.log(addr, `LD ${r_debug[y]}, ${r_debug[z]}`); }
                     this.r8[r[y]] = this.r8[r[z]];
@@ -818,7 +938,7 @@ export class Z80 implements CPU {
                 let nn = this.memory.uread16(this.r16[PC])
                 this.r16[PC] += 2;
                 if (log) { this.log(addr, `JP ${cc_debug[y]}, ${(nn).toString(16)}`); }
-                if (nn_predicates[y](this.r8[F])) {
+                if (this.cc(y)) {
                     this.r16[PC] = nn;
                 }
 
@@ -873,17 +993,22 @@ export class Z80 implements CPU {
             }
 
             if (z === 4) {
-                // TODO: incorrect
                 let nn = this.memory.uread16(this.r16[PC]++)
-                this.r16[PC]++;
-                if (log) { this.log(addr, `CALL ${this.hex16(nn)}`); }
+                this.r16[PC] += 2;
+                if (log) { this.log(addr, `CALL ${cc_debug[y]}, ${this.hex16(nn)}`); }
+                if (this.cc(y)) {
+                    this.r16[SP] -= 2;
+                    this.memory.uwrite16(this.r16[SP], this.r16[PC]);
+                    this.log(addr, `CALL CONDITIONAL ${this.hex16(nn)}`);
+                    this.r16[PC] = nn;
+                }
             }
 
             if (z === 5) {
                 if (q === 0) {
-                    if (log) { this.log(addr, `PUSH ${rp2_debug[p]}`); }
+                    if (log) { this.log(addr, `PUSH ${rp2_debug_dd_fd[opcodeMode][p]}`); }
                     this.r16[SP] -= 2;
-                    this.memory.uwrite16(this.r16[SP], this.r16[rp2[p]]);
+                    this.memory.uwrite16(this.r16[SP], this.r16[rp2_dd_fd[opcodeMode][p]]);
                 } else {
                     if (p === 0) {
 
@@ -917,8 +1042,6 @@ export class Z80 implements CPU {
                 this.r16[PC] = (y * 8) & 0xFF;
             }
         }
-
-        return tStates;
     }
 
     private aluOperation(y: number, n: number) {
@@ -947,6 +1070,18 @@ export class Z80 implements CPU {
             case ALU_CP:
                 this.CP(n);
                 break;
+        }
+    }
+
+    interrupt(): void {
+        if (this.Interrupts) {
+            // Push the program counter
+            this.r16[PC] += 2;
+            this.r16[SP] -= 2;
+            this.memory.uwrite16(this.r16[SP], this.r16[PC]);
+            // Execute the interrupt routine
+            this.halted = false;
+            this.r16[PC] = 0x0038;
         }
     }
 }
