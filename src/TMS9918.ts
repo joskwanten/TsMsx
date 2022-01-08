@@ -30,7 +30,7 @@ export class TMS9918 {
     vram = new Uint8Array(0x4000);
     vramAddress = 0;
     vdpStatus = 0;
-    refreshRate = 60; // NTSC
+    refreshRate = 600; // NTSC
     lastRefresh = 0;
 
     hasLatchedData = false;

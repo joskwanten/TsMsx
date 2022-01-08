@@ -142,7 +142,7 @@ export class Z80 implements CPU {
     r8s = new Uint8Array(this.r16s);
 
     // Interrupts are enabled at startup
-    Interrupts: boolean = true;
+    interruptEnabled: boolean = true;
 
     // Number of T-States executed
     tStates: number = 0;
@@ -565,6 +565,9 @@ export class Z80 implements CPU {
                     break;
                 case 5:
                     if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    if (true) { this.log(edAddr, y === 1 ? "RETI" : "RETN"); }
+                    this.r16[PC] = this.memory.uread16(this.r16[SP]);
+                    this.r16[SP] += 2;
                     break;
                 case 6:
                     if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
@@ -593,7 +596,7 @@ export class Z80 implements CPU {
                             if (inc) {
                                 this.r16[HL]++;
                             } else {
-                                this.r16[HL]++;
+                                this.r16[HL]--;
                             }
                             this.r8[B]--;
                         }
@@ -608,7 +611,35 @@ export class Z80 implements CPU {
                     break;
 
                 case 2:
-                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    {
+                        if (log && y === 4) { this.log(edAddr, `INI`); }
+                        else if (log && y === 5) { this.log(edAddr, `IND`); }
+                        else if (log && y === 6) { this.log(edAddr, `INIR`); }
+                        else if (log && y === 7) { this.log(edAddr, `INDR`); }
+
+                        // OTIR and OTID are the same instructions as OUTI and OUTD
+                        // but only repeat until register D is zero.
+                        let repeat = y === 6 || y == 7 ? this.r8[B] : 1;
+                        let inc = y === 4 || y == 6;
+
+                        for (let i = 0; i < repeat; i++) {
+                            this.r16[HL] = this.memory.uread8(this.r8[C]);
+
+                            if (inc) {
+                                this.r16[HL]++;
+                            } else {
+                                this.r16[HL]--;
+                            }
+                            this.r8[B]--;
+                        }
+
+                        this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
+                        if (this.r8[B]) {
+                            this.r8[F] &= ~FLAG_ZERO;
+                        } else {
+                            this.r8[F] |= FLAG_ZERO;
+                        }
+                    }
                     break;
 
                 case 1:
@@ -617,6 +648,7 @@ export class Z80 implements CPU {
 
                 case 0:
                     {
+                        throw new Error("FIXME"); // Check specifications!
                         if (log && y === 4) { this.log(edAddr, `LDI`); }
                         else if (log && y === 5) { this.log(edAddr, `LDD`); }
                         else if (log && y === 6) { this.log(edAddr, `LDIR`); }
@@ -983,11 +1015,11 @@ export class Z80 implements CPU {
                         break;
                     case 6:	//DI
                         if (log) { this.log(addr, `DI`); }
-                        this.Interrupts = false;
+                        this.interruptEnabled = false;
                         break;
                     case 7:	//EI
                         if (log) { this.log(addr, `EI`); }
-                        this.Interrupts = true;
+                        this.interruptEnabled = true;
                         break;
                 }
             }
@@ -1074,14 +1106,16 @@ export class Z80 implements CPU {
     }
 
     interrupt(): void {
-        if (this.Interrupts) {
+        if (this.interruptEnabled) {
             // Push the program counter
             this.r16[PC] += 2;
             this.r16[SP] -= 2;
             this.memory.uwrite16(this.r16[SP], this.r16[PC]);
             // Execute the interrupt routine
             this.halted = false;
+            let retadd = this.r16[PC];
             this.r16[PC] = 0x0038;
+            this.log(0x0038, `INT ($${retadd})`);
         }
     }
 }

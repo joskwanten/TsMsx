@@ -227,6 +227,9 @@ async function reset() {
                 case 0xa8:
                     slots.setSlotSelector(value);
                     break;
+                case 0x7d:
+                    console.debug("Check program counter");
+                    break;
                 default:
                     console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
@@ -298,7 +301,7 @@ window.onload = () => {
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
         while (running) {
-            step(100, false);
+            step(1000, false);
             await wait(10);
             if (!running) {
                 return;
