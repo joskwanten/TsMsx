@@ -1039,6 +1039,7 @@ export class Z80 implements CPU {
 
             if (z === 7) {
                 if (log) { this.log(addr, `RST ${(y * 8).toString(16)}`); }
+                throw new Error("TODO IMPLEMENT RST");
                 this.r16[PC] = (y * 8) & 0xFF;
             }
         }
