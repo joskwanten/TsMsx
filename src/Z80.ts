@@ -654,27 +654,27 @@ export class Z80 implements CPU {
                         else if (log && y === 6) { this.log(edAddr, `LDIR`); }
                         else if (log && y === 7) { this.log(edAddr, `LDDR`); }
 
-                        // LDIR and LDDR are the same instructions as OUTI and OUTD
+                        // LDIR and LDDR are the same instructions as LDI and LDD
                         // but only repeat until register D is zero.
                         let repeat = y === 6 || y == 7 ? this.r16[BC] : 1;
+                        // Increment or decrement 
                         let inc = y === 4 || y == 6;
 
                         for (let i = 0; i < repeat; i++) {
-                            this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
+                            this.memory.uwrite8(this.r16[DE], this.memory.uread8(this.r16[HL]));
 
                             if (inc) {
                                 this.r16[HL]++;
+                                this.r16[DE]++;
                             } else {
-                                this.r16[HL]++;
+                                this.r16[HL]--;
+                                this.r16[DE]--;
                             }
-                            this.r8[B]--;
+                            this.r16[BC]--;
                         }
 
-                        this.r8[F] &= ~FLAG_SIGN_F3_F5; // Reset Negative / Sign flag (others undocumented
-                        if (this.r8[B]) {
-                            this.r8[F] &= ~FLAG_ZERO;
-                        } else {
-                            this.r8[F] |= FLAG_ZERO;
+                        if (this.r16[BC] == 0) {
+                            this.reset_flags(Flags.PV);
                         }
                     }
                     break;
@@ -1071,7 +1071,9 @@ export class Z80 implements CPU {
 
             if (z === 7) {
                 if (log) { this.log(addr, `RST ${(y * 8).toString(16)}`); }
-                this.r16[PC] = (y * 8) & 0xFF;
+                this.r16[SP] -= 2;
+                this.memory.uwrite16(this.r16[SP], this.r16[PC]);
+                this.r16[PC] = y * 8;
             }
         }
     }
