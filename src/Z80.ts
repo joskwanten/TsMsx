@@ -643,12 +643,11 @@ export class Z80 implements CPU {
                     break;
 
                 case 1:
-                    if (true) { this.log(edAddr, `NOT IMPLEMENTED`); }
+                    throw new Error('NOT IMPLEMENTED');
                     break;
 
                 case 0:
                     {
-                        throw new Error("FIXME"); // Check specifications!
                         if (log && y === 4) { this.log(edAddr, `LDI`); }
                         else if (log && y === 5) { this.log(edAddr, `LDD`); }
                         else if (log && y === 6) { this.log(edAddr, `LDIR`); }
@@ -849,16 +848,34 @@ export class Z80 implements CPU {
                         }
                         break;
                     case 2: // RLA
-                        if (log) { this.log(addr, 'RLA NOT IMPLEMENTED'); }
-                        //this.log(addr, 'RLA');
+                        if (log) { this.log(addr, 'RLA'); }
+                        let result = this.r8[A] << 1;
+                        let carry = (result & 0x100) > 0;
+                        this.r8[A] = result;
+                        this.toggle_flag(Flags.C, carry);
+                        this.reset_flags(Flags.H, Flags.N);
+                        this.tStates += 4;
+                        // C is changed to the leaving 7th bit, H and N are reset, P/V , S and Z are preserved.
                         break;
-                    case 3: // RRA      
-                        if (log) { this.log(addr, 'RRA NOT IMPLEMENTED'); }
-                        //this.log(addr, 'RRA');                                           
+                    case 3: // RRA
+                        throw new Error('RRA NOT IMPLEMENTED');                                         
                         break;
                     case 4:	// DAA
-                        if (log) { this.log(addr, 'DAA NOT IMPLEMENTED'); }
-                        //this.log(addr, 'DAA');
+                        // if the lower 4 bits form a number greater than 9 or H is set, add $06 to the accumulator
+                        // if the upper 4 bits form a number greater than 9 or C is set, add $60 to the accumulator
+                        if (log) { this.log(addr, 'DAA'); }
+                        let lsb = this.r8[A] & 0xf;
+                        let msb = this.r8[A] >> 4;
+                        if (lsb > 9 || (this.r8[F] & Flags.H)) {
+                            lsb += 6;
+                        } 
+                        if (msb > 9 || (this.r8[F] & Flags.C)) {
+                            msb += 6;
+                            this.set_flags(Flags.C);
+                        } 
+                        this.r8[A] = msb << 4 + lsb;
+                        this.set_parity(this.r8[A]);
+                        this.tStates += 4;
                         break;
                     case 5:	// CPL
                         {
@@ -873,8 +890,7 @@ export class Z80 implements CPU {
                         this.reset_flags(Flags.H, Flags.N);
                         break;
                     case 7:	// CCF
-                        if (true) { this.log(addr, 'CCF NOT IMPLEMENTED'); }
-                        //this.log(addr, 'CCF');
+                        throw new Error('CCF NOT IMPLEMENTED');
                         break;
                 }
 

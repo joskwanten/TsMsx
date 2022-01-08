@@ -169,7 +169,7 @@ async function reset() {
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
-    
+
     class ScreenLogger implements Logger {
         debug(str: string, registers: Registers): void {
             let div = document.createElement('div');
@@ -230,6 +230,11 @@ async function reset() {
                 case 0x7d:
                     console.debug("Check program counter");
                     break;
+                case 0x20:
+                    throw new Error('Invalid')
+                case 0x2e:
+                case 0x2f:
+                    console.log(`Debug info ${address.toString(16)}, ${value}, ${String.fromCharCode(value)}`)
                 default:
                     console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
@@ -306,7 +311,7 @@ window.onload = () => {
             if (!running) {
                 return;
             }
-            
+
             vdp.checkAndGenerateInterrupt(Date.now());
         }
     });

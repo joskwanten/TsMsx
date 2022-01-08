@@ -49,7 +49,7 @@ export class TMS9918 {
     }
 
     getPatternGenerationTable() {
-        return (this.registers[4]) << 13;
+        return ((this.registers[4]) & 7) << 13;
     }
 
     getTextColor() {
