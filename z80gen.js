@@ -17,30 +17,28 @@ function emitComment(comment) {
 }
 
 let nn_read = `
-    let src = this.memory.uread16(this.r16[PC]);
-    this.r16[PC] += 2;
+let src = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;
 `;
 
 let nn_read_ind = `
-    let nn = this.memory.uread16(this.r16[PC]);
-    this.r16[PC] += 2;
-    let src = this.memory.uread16(nn);
+let nn = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;
+let src = this.memory.uread16(nn);
 `;
 
 let nn_write_ind8 = `
-    let nn = this.memory.uread16(this.r16[PC]);
-    this.r16[PC] += 2;
-    this.memory.uwrite8(nn, src);
+let nn = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;
+this.memory.uwrite8(nn, src);
 `;
 
-let nn_write_ind16 = `
-    let nn = this.memory.uread16(this.r16[PC]);
-    this.r16[PC] += 2;
-    this.memory.uwrite8(nn, src);
-`;
+let nn_write_ind16 = `let nn = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;
+this.memory.uwrite16(nn, src);`;
 
 let n_read = `
-    let src = this.memory.uread8(this.r16[PC]++);    
+let src = this.memory.uread8(this.r16[PC]++);    
 `;
 
 const registersLD = {
@@ -61,15 +59,33 @@ const registersLD = {
     '(DE)': { type: 16, src: 'let src = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], src);' },
     '(HL)': { type: 16, src: 'let src = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], src);' },
     'HL\'': { type: 16, src: 'let src = this.r16s[HL];', dst: 'this.r16s[HL] = src;' },
-    'IXh': { type: 16, src: 'let src = this.r8[IXh];', dst: 'this.r8[IXh] = src;' },
-    'IXl': { type: 16, src: 'let src = this.r8[IXl];', dst: 'this.r8[IXl] = src;' },
+    'IXh': { type: 8, src: 'let src = this.r8[IXh];', dst: 'this.r8[IXh] = src;' },
+    'IXl': { type: 8, src: 'let src = this.r8[IXl];', dst: 'this.r8[IXl] = src;' },
+    'IX': { type: 16, src: 'let src = this.r16[IX];', dst: 'this.r16[IX] = src;' },
+    'IY': { type: 16, src: 'let src = this.r16[IY];', dst: 'this.r16[IY] = src;' },
     '(IX+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, src);' },
     '(IY+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, src);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': {type: 8, src: 'let src = this.memory.uread8(this.r16[PC]++);', dst: undefined },
-    '(nn)': { type: 24, src: nn_read_ind, dst8: nn_write_ind8, dst16: nn_write_ind16 }
-
+    '(nn)': { type: 24, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
+
+const rLookup = {0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A'};
+
+
+function generateLDOpcode(r, dst, src) {
+    emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+    emitCode(registersLD[src].src);
+    if (registersLD[src].type == 16) {
+        emitCode(registersLD[dst].dst16);
+    } else {
+        emitCode(registersLD[dst].dst);
+    }
+    emitCode(`this.cycles += ${r.TimingZ80};`);    
+    emitCode(`this.log(addr, '${r.Instruction}')`);
+    emitComment('END\n\n');
+}
+
 
 function generateLD(r) {
     //console.log(r);
@@ -78,14 +94,16 @@ function generateLD(r) {
         throw new Error('No match for ' + JSON.stringify(r));
     }
 
-    emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-    let src = match.groups["operand2"];
     let dst = match.groups["operand"];
-    emitCode(registersLD[src].src);
-    emitCode(registersLD[dst].dst);
-    emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitComment('END\n\n');
-
+    let src = match.groups["operand2"];
+    
+    if (src == 'r') {
+        Object.entries(rLookup).forEach(c => {
+            generateLDOpcode(r, dst, c[1]);    
+        });
+    } else {
+        generateLDOpcode(r, dst, src);
+    }
 }
 
 fs.createReadStream('Opcodes.csv')
