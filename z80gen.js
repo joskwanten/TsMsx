@@ -16,114 +16,76 @@ function emitComment(comment) {
     emitCode(`// ${comment}`);
 }
 
-function emitFetchN() {
-    emitCode(`let n = this.memory.uread8(this.r16[PC]++);`);
-}
+let nn_read = `
+    let src = this.memory.uread16(this.r16[PC]);
+    this.r16[PC] += 2;
+`;
 
-function emitFetchNN() {
-    emitCode(`let nn = this.memory.uread8(this.r16[PC]++) | (this.memory.uread8(this.r16[PC]++) << 8);`);
-}
+let nn_read_ind = `
+    let nn = this.memory.uread16(this.r16[PC]);
+    this.r16[PC] += 2;
+    let src = this.memory.uread16(nn);
+`;
 
-function emitFetchIndirect8(reg) {
-    emitCode(`let val2 = this.memory.uread8(this.r16[${reg}]);`);
-}
+let nn_write_ind8 = `
+    let nn = this.memory.uread16(this.r16[PC]);
+    this.r16[PC] += 2;
+    this.memory.uwrite8(nn, src);
+`;
 
-function emitFetchIndirect16(reg) {
-    emitCode(`let val2 = this.memory.uread16(this.r16[${reg}]);`);
-}
+let nn_write_ind16 = `
+    let nn = this.memory.uread16(this.r16[PC]);
+    this.r16[PC] += 2;
+    this.memory.uwrite8(nn, src);
+`;
 
-function emitFetchDirect8(reg) {
-    emitCode(`let val2 = this.r8[${reg}];`);
-}
+let n_read = `
+    let src = this.memory.uread8(this.r16[PC]++);    
+`;
 
-function emitFetchDirect16(reg) {
-    emitCode(`let val2 = this.r16[${reg}];`);
-}
+const registersLD = {
+    'A': { type: 8, src: 'let src = this.r8[A];', dst: 'this.r8[A] = src;' },
+    'F': { type: 8, src: 'let src = this.r8[F];', dst: 'this.r8[F] = src;' },
+    'B': { type: 8, src: 'let src = this.r8[B];', dst: 'this.r8[B] = src;' },
+    'C': { type: 8, src: 'let src = this.r8[C];', dst: 'this.r8[C] = src;' },
+    '(C)': { type: 8, src: 'let src = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], src);' },
+    'D': { type: 8, src: 'let src = this.r8[D];', dst: 'this.r8[D] = src;' },
+    'E': { type: 8, src: 'let src = this.r8[E];', dst: 'this.r8[E] = src;' },
+    'H': { type: 8, src: 'let src = this.r8[H];', dst: 'this.r8[H] = src;' },
+    'L': { type: 8, src: 'let src = this.r8[L];', dst: 'this.r8[L] = src;' },
+    'AF': { type: 16, src: 'let src = this.r16[AF];', dst: 'this.r16[AF] = src;' },
+    'BC': { type: 16, src: 'let src = this.r16[BC];', dst: 'this.r16[BC] = src;' },
+    'DE': { type: 16, src: 'let src = this.r16[DE];', dst: 'this.r16[DE] = src;' },
+    'HL': { type: 16, src: 'let src = this.r16[HL];', dst: 'this.r16[HL] = src;' },    
+    '(BC)': { type: 16, src: 'let src = this.memory.read8(this.r16[BC]);', dst: 'this.memory.write8(this.r16[BC], src);' },
+    '(DE)': { type: 16, src: 'let src = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], src);' },
+    '(HL)': { type: 16, src: 'let src = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], src);' },
+    'HL\'': { type: 16, src: 'let src = this.r16s[HL];', dst: 'this.r16s[HL] = src;' },
+    'IXh': { type: 16, src: 'let src = this.r8[IXh];', dst: 'this.r8[IXh] = src;' },
+    'IXl': { type: 16, src: 'let src = this.r8[IXl];', dst: 'this.r8[IXl] = src;' },
+    '(IX+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, src);' },
+    '(IY+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, src);' },
+    'nn': { type: 24, src: nn_read, dst: undefined },
+    'n': {type: 8, src: 'let src = this.memory.uread8(this.r16[PC]++);', dst: undefined },
+    '(nn)': { type: 24, src: nn_read_ind, dst8: nn_write_ind8, dst16: nn_write_ind16 }
 
-function emitStoreInNN8() {
-    emitCode(`this.memory.uwrite8(nn, val2);`);
-}
-
-function emitStoreInNN16() {
-    emitCode(`this.memory.uwrite16(nn, val2);`);
-}
-
-
-function emitStoreInReg8(reg) {
-    emitCode(`this.r8[${reg}] = val2;`);
-}
-
-function emitStoreInReg16(reg) {
-    emitCode(`this.r16[${reg}] = val2;`);
-}
-let registerNames = ['A', 'F', 'B', 'C', 'D', 'E', 'H', 'L', 'AF', 'BC', 'DE', 'HL', 'HL\'', 'IXh', 'IXl', 'IX+o', 'IY+o'];
-let aliases = ['n', 'nn', 'p', 'q'];
-
+};
 
 function generateLD(r) {
     //console.log(r);
     let match = mnemonic.exec(r.Instruction);
     if (!match) {
         throw new Error('No match for ' + JSON.stringify(r));
-    } else {
-        emitComment(r.Instruction);
-
-        if (match.groups['operand2']) {
-            let operand2 = match.groups['operand2'];
-            let indirectMatch = indirect.exec(operand2)
-            if (indirectMatch) {
-                let reg = indirectMatch.groups['reg'];
-                if (reg === 'n') {
-                    emitFetchN();
-                } else if (reg === 'nn') {
-                    emitFetchNN();
-                }
-
-                if (reg.length == 1) {
-                    emitFetchIndirect8(reg);
-                } else {
-                    emitFetchIndirect16(reg);
-                }
-            } else {
-                if (operand2 === 'n') {
-                    emitFetchN();
-                } else if (operand2 === 'nn') {
-                    emitFetchNN();
-                } else if (operand2.length == 1) {
-                    emitFetchDirect8(operand2);
-                } else {
-                    emitFetchDirect16(operand2);
-                }
-            }
-        }
-
-        if (match.groups['operand']) {
-            let operand = match.groups['operand'];
-            let indirectMatch = indirect.exec(operand);
-            if (indirectMatch) {
-                let reg = indirectMatch.groups['reg'];
-                if (reg === 'nn') {
-                    emitStoreInNN16();
-                } else if (reg.length == 1) {
-                    emitStoreInReg8Indirect(reg);
-                } else {
-                    emitStoreInReg16Indirect(reg);
-                }
-            } else {
-                if (operand === 'n') {
-                    emitFetchN();
-                } else if (operand === 'nn') {
-                    emitFetchNN();
-                } else if (operand.length == 1) {
-                    emitStoreInReg8(operand);
-                } else {
-                    emitStoreInReg16(operand);
-                }
-            }
-        }
-
-        emitComment('END\n\n');
     }
+
+    emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+    let src = match.groups["operand2"];
+    let dst = match.groups["operand"];
+    emitCode(registersLD[src].src);
+    emitCode(registersLD[dst].dst);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitComment('END\n\n');
+
 }
 
 fs.createReadStream('Opcodes.csv')
