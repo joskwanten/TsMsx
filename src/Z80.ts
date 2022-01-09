@@ -32,7 +32,11 @@ const _R = 8;
 const PC = 9;
 const _F = 10;
 const rp = [BC, DE, HL, SP];
+const rp_dd = [BC, DE, IX, SP];
+const rp_fd = [BC, DE, IY, SP];
 const rp_debug = ["BC", "DE", "HL", "SP"];
+const rp_debug_dd = ["BC", "DE", "IX", "SP"];
+const rp_debug_fd = ["BC", "DE", "IY", "SP"];
 const rp2 = [BC, DE, HL, AF];
 const rp2_dd = [BC, DE, IX, AF];
 const rp2_fd = [BC, DE, IY, AF];
@@ -48,6 +52,17 @@ const r_debug_fd = ["B", "C", "D", "E", "IYH", "IYL", "HL", "A"];
 
 const alu_debug = ["ADD A,", "ADC A,", "SUB ", "SBC A,", "AND", "XOR", "OR", "CP"];
 
+let rp_dd_fd: any = {
+    0x00: rp,      // Normal instructions
+    0xdd: rp_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: rp_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
+
+let rp_debug_dd_fd: any = {
+    0x00: rp_debug,      // Normal instructions
+    0xdd: rp_debug_dd,   // DD instructions (H is replaced by IXH and L by IXL)
+    0xfd: rp_debug_fd,   // FD instructions (H is replaced by IYH and L by IYL)
+};
 
 let r_dd_fd: any = {
     0x00: r,
@@ -725,12 +740,16 @@ export class Z80 implements CPU {
                 switch (y) {
                     case 0:
                         if (log) { this.log(addr, "NOP"); }
+                        this.tStates += 4;
                         break;
                     case 1:
-                        if (log) { this.log(addr, "EX AF, AF'"); }
-                        let tmp = this.r16[AF];
-                        this.r16[AF] = this.r16s[AF];
-                        this.r16s[AF] = this.r16[AF];
+                        {
+                            if (log) { this.log(addr, "EX AF, AF'"); }
+                            let tmp = this.r16[AF];
+                            this.r16[AF] = this.r16s[AF];
+                            this.r16s[AF] = this.r16[AF];
+                            this.tStates += 4;
+                        }
                         break;
                     case 2:
                         {
@@ -738,6 +757,7 @@ export class Z80 implements CPU {
                             if (log) { this.log(addr, "DJNZ " + d); }
                             this.r8[B]--;
                             this.r16[PC] += this.r8[B] !== 0 ? d : 0;
+                            this.tStates += this.r8[B] !== 0 ? 13 : 8;
                         }
                         break;
                     case 3:
@@ -745,6 +765,7 @@ export class Z80 implements CPU {
                             let d = this.memory.read8(this.r16[PC]++);
                             if (log) { this.log(addr, "JR " + d); }
                             this.r16[PC] += d;
+                            this.tStates += 10;
                         }
                         break;
                     case 4:
@@ -755,6 +776,7 @@ export class Z80 implements CPU {
                             let d = this.memory.read8(this.r16[PC]++);
                             if (log) { this.log(addr, `JR ${cc_debug[y - 4]}, ${d}`); }
                             this.r16[PC] += this.cc(y - 4) ? d : 0;
+                            this.tStates += this.cc(y - 4) ? 12 : 7;
                         }
                     default:
                 }
@@ -763,12 +785,24 @@ export class Z80 implements CPU {
             if (z === 1) {
                 if (q === 0) {
                     let nn = this.memory.uread8(this.r16[PC]++) | (this.memory.uread8(this.r16[PC]++) << 8);
-                    if (log) { this.log(addr, "LD " + rp_debug[p] + ", $" + nn.toString(16)); }
-                    this.r16[rp[p]] = nn & 0xFFFF; //(nn & 0xFF)  << 8 + ((nn >> 8) & 0xFF);
+                    if (log) { this.log(addr, "LD " + rp_debug_dd_fd[opcodeMode][p] + ", $" + nn.toString(16)); }
+                    this.r16[rp_dd_fd[opcode][p]] = nn; //(nn & 0xFF)  << 8 + ((nn >> 8) & 0xFF);
                 }
                 if (q == 1) {
-                    if (log) { this.log(addr, "ADD HL, " + rp_debug[p]); }
-                    this.r16[HL] = this.ADD16(this.r16[HL], this.r16[rp[p]]);
+                    // TODO: Check flag modification
+                    if (opcodeMode == 0) {
+                        if (log) { this.log(addr, `ADD HL, ` + rp_debug[p]); }
+                        this.r16[HL] = this.ADD16(this.r16[HL], this.r16[rp[p]]);
+                        this.tStates += 11;
+                    } else if (opcodeMode == 0xdd) {
+                        if (log) { this.log(addr, `ADD IX, ` + rp_debug_dd[p]); }
+                        this.r16[IX] = this.ADD16(this.r16[IX], this.r16[rp_dd[p]]);
+                        this.tStates += 15;
+                    } else {
+                        if (log) { this.log(addr, `ADD IY, ` + rp_debug_fd[p]); }
+                        this.r16[IY] = this.ADD16(this.r16[IY], this.r16[rp_fd[p]]);
+                        this.tStates += 15;
+                    }
                 }
             }
 
@@ -858,7 +892,7 @@ export class Z80 implements CPU {
                         // C is changed to the leaving 7th bit, H and N are reset, P/V , S and Z are preserved.
                         break;
                     case 3: // RRA
-                        throw new Error('RRA NOT IMPLEMENTED');                                         
+                        throw new Error('RRA NOT IMPLEMENTED');
                         break;
                     case 4:	// DAA
                         // if the lower 4 bits form a number greater than 9 or H is set, add $06 to the accumulator
@@ -868,11 +902,11 @@ export class Z80 implements CPU {
                         let msb = this.r8[A] >> 4;
                         if (lsb > 9 || (this.r8[F] & Flags.H)) {
                             lsb += 6;
-                        } 
+                        }
                         if (msb > 9 || (this.r8[F] & Flags.C)) {
                             msb += 6;
                             this.set_flags(Flags.C);
-                        } 
+                        }
                         this.r8[A] = msb << 4 + lsb;
                         this.set_parity(this.r8[A]);
                         this.tStates += 4;
