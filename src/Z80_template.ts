@@ -58,6 +58,9 @@ enum Flags {
 
 const cc_debug = ["NZ", "Z", "NC", "C", "PO", "PE", "P", "M"];
 
+type Instruction = (addr: number) => void;
+type Instructions = Instruction[];
+
 export class Z80Gen implements CPU {
     // Declare 256bits for the registers
     // The Z80 uses 208bits from it
@@ -91,20 +94,58 @@ export class Z80Gen implements CPU {
     halted = false;
 
     // Instructions
-    instructions: (() => void)[];
+    instructions: Instruction[];
+    prefixedInstructions: Instructions[];
+    
+
+    public dumpRegisters(): Registers {
+        let registers: Registers = {};
+        r16_debug.forEach((v, i) => {
+            registers[v] = this.r16[i];
+        });
+
+        r16_debug.forEach((v, i) => {
+            registers[`_${v}`] = this.r16s[i];
+        });
+
+        return registers;
+    }
+
+    private log(address: number, msg: string): void {
+        this.logger.debug(
+            ("000" + address.toString(16)).slice(-4) + " : " + msg,
+            this.dumpRegisters()
+        );
+    }
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
         this.instructions = new Array(256);
+        this.prefixedInstructions = new Array<Instructions>();
+        
+        [0xDD, 0xFD, 0xCD, 0xED].forEach(opcode => {
+            this.prefixedInstructions[opcode] = new Array(256);
+        });
+        
         this.instructions[0x00] = () => {
             // NOP
             this.cycles += 4;
         }
-        this.instructions[0x01] = () => {
-            let nn = this.memory.uread8(this.r16[PC]++) | (this.memory.uread8(this.r16[PC]++) << 8);
-            
-                    if (log) { this.log(addr, "LD " + rp_debug[p] + ", $" + nn.toString(16)); }
-                    this.r16[rp[p]] = nn & 0xFFFF; //(nn & 0xFF)  << 8 + ((nn >> 8) & 0xFF);
-                }
+        
+        this.instructions[0x01] = (addr: number) => {            
+            let nn = this.memory.uread16(this.r16[PC]);
+            this.r16[PC] += 2;
+            this.log(addr, `LD BC, ${nn.toString(16)}`);
+            this.r16[BC] = nn;
+            this.cycles += 10;
+
+            // In those cases, C is preserved, H and N are reset, and alters Z and S. P/V is set if interrupts are enabled, reset otherwise.
+        }
+
+        this.instructions[0x02] = (addr: number) => {            
+            let nn = this.memory.uread16(this.r16[PC]);            
+            this.log(addr, `LD (BC), A`);
+            this.memory.uwrite8(this.r16[BC], this.r8[A]);
+            this.cycles += 7;
         }
 
     }
@@ -130,21 +171,6 @@ export class Z80Gen implements CPU {
     interrupt(): void {
         throw new Error('Method not implemented.');
     }
-
-
-    public dumpRegisters(): Registers {
-        let registers: Registers = {};
-        r16_debug.forEach((v, i) => {
-            registers[v] = this.r16[i];
-        });
-
-        r16_debug.forEach((v, i) => {
-            registers[`_${v}`] = this.r16s[i];
-        });
-
-        return registers;
-    }
-
 
     reset(): void {
         this.r16[PC] = 0;
