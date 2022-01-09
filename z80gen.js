@@ -54,10 +54,11 @@ const registersLD = {
     'AF': { type: 16, src: 'let src = this.r16[AF];', dst: 'this.r16[AF] = src;' },
     'BC': { type: 16, src: 'let src = this.r16[BC];', dst: 'this.r16[BC] = src;' },
     'DE': { type: 16, src: 'let src = this.r16[DE];', dst: 'this.r16[DE] = src;' },
-    'HL': { type: 16, src: 'let src = this.r16[HL];', dst: 'this.r16[HL] = src;' },    
-    '(BC)': { type: 16, src: 'let src = this.memory.read8(this.r16[BC]);', dst: 'this.memory.write8(this.r16[BC], src);' },
-    '(DE)': { type: 16, src: 'let src = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], src);' },
-    '(HL)': { type: 16, src: 'let src = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], src);' },
+    'HL': { type: 16, src: 'let src = this.r16[HL];', dst: 'this.r16[HL] = src;' },
+    'SP': { type: 16, src: 'let src = this.r16[SP];', dst: 'this.r16[SP] = src;' },   
+    '(BC)': { type: 8, src: 'let src = this.memory.read8(this.r16[BC]);', dst: 'this.memory.write8(this.r16[BC], src);' },
+    '(DE)': { type: 8, src: 'let src = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], src);' },
+    '(HL)': { type: 8, src: 'let src = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], src);' },
     'HL\'': { type: 16, src: 'let src = this.r16s[HL];', dst: 'this.r16s[HL] = src;' },
     'IXh': { type: 8, src: 'let src = this.r8[IXh];', dst: 'this.r8[IXh] = src;' },
     'IXl': { type: 8, src: 'let src = this.r8[IXl];', dst: 'this.r8[IXl] = src;' },
@@ -73,7 +74,8 @@ const registersLD = {
 const rLookup = {0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A'};
 
 
-function generateLDOpcode(r, dst, src) {
+function generateLDOpcode(r, dst, src, opcode) {
+    emitCode(`this.addInstruction(${opcode}, () => {`);
     emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     emitCode(registersLD[src].src);
     if (registersLD[src].type == 16) {
@@ -83,26 +85,40 @@ function generateLDOpcode(r, dst, src) {
     }
     emitCode(`this.cycles += ${r.TimingZ80};`);    
     emitCode(`this.log(addr, '${r.Instruction}')`);
-    emitComment('END\n\n');
+    emitCode(`});\n`);
 }
 
+function fillRInOpcode(opcode, r) {
+    let regex = /(?<base>\w+)\+r/
+    return opcode.map(o => {
+        let match = regex.exec(o);
+        if (match) {
+            return `0x${(parseInt(match.groups['base'], 16) + parseInt(r)).toString(16)}`;
+        }
+        return `0x${o}`;
+    })
 
-function generateLD(r) {
+}
+
+function generateLD(row) {
     //console.log(r);
-    let match = mnemonic.exec(r.Instruction);
+    let match = mnemonic.exec(row.Instruction);
     if (!match) {
-        throw new Error('No match for ' + JSON.stringify(r));
+        throw new Error('No match for ' + JSON.stringify(row));
     }
 
     let dst = match.groups["operand"];
     let src = match.groups["operand2"];
-    
+    let opcode = row.Opcode.replace(/n/g, '').trim().split(' ');
+    console.log(opcode);
+
     if (src == 'r') {
         Object.entries(rLookup).forEach(c => {
-            generateLDOpcode(r, dst, c[1]);    
+            let r = c[0];
+            generateLDOpcode(row, dst, c[1], fillRInOpcode(opcode, r));    
         });
     } else {
-        generateLDOpcode(r, dst, src);
+        generateLDOpcode(row, dst, src);
     }
 }
 
