@@ -15,10 +15,10 @@ const H = 7;
 const L = 6;
 const I = 16;
 const R = 17;
-const IXH = 9;
-const IXL = 8;
-const IYH = 11;
-const IYL = 10;
+const IXh = 9;
+const IXl = 8;
+const IYh = 11;
+const IYl = 10;
 const r8_debug = ["F", "A", "C", "B", "E", "D", "L", "H"];
 const r16_debug = ["AF", "BC", "DE", "HL", "IX", "IY", "SP", "PC"];
 
@@ -46,8 +46,8 @@ const rp2_debug = ["BC", "DE", "HL", "AF"];
 const rp2_debug_dd = ["BC", "DE", "IX", "AF"];
 const rp2_debug_fd = ["BC", "DE", "IY", "AF"];
 const r = [B, C, D, E, H, L, HL, A];
-const r_dd = [B, C, D, E, IXH, IXL, HL, A];
-const r_fd = [B, C, D, E, IYH, IYL, HL, A];
+const r_dd = [B, C, D, E, IXh, IXl, HL, A];
+const r_fd = [B, C, D, E, IYh, IYl, HL, A];
 const r_debug = ["B", "C", "D", "E", "H", "L", "HL", "A"];
 const r_debug_dd = ["B", "C", "D", "E", "IXH", "IXL", "HL", "A"];
 const r_debug_fd = ["B", "C", "D", "E", "IYH", "IYL", "HL", "A"];
@@ -170,6 +170,7 @@ export class Z80 implements CPU {
 
     // flag to indicate if the CPU is halted
     halted = false;
+    cycles: number = 0;
 
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
@@ -1171,5 +1172,24 @@ export class Z80 implements CPU {
             this.r16[PC] = 0x0038;
             this.log(0x0038, `INT ($${retadd})`);
         }
+    }
+
+    addOpcodes() {
+    }
+
+    addInstructionED(arg0: number, func: (addr: number) => void) {
+        throw new Error('Method not implemented.');
+    }
+
+    addInstructionDD(arg0: number, func: (addr: number) => void) {
+        throw new Error('Method not implemented.');
+    }
+
+    addInstructionFD(arg0: number, func: (addr: number) => void) {
+        throw new Error('Method not implemented.');
+    }
+
+    addInstruction(arg0: number, func: (addr: number) => void) {
+        throw new Error('Method not implemented.');
     }
 }
