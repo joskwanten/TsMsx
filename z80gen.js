@@ -17,61 +17,64 @@ function emitComment(comment) {
 }
 
 let nn_read = `
-let src = this.memory.uread16(this.r16[PC]);
+let val = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
 `;
 
 let nn_read_ind = `
 let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-let src = this.memory.uread16(nn);
+let val = this.memory.uread16(nn);
 `;
 
 let nn_write_ind8 = `
 let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-this.memory.uwrite8(nn, src);
+this.memory.uwrite8(nn, val);
 `;
 
 let nn_write_ind16 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-this.memory.uwrite16(nn, src);`;
+this.memory.uwrite16(nn, val);`;
 
 let n_read = `
-let src = this.memory.uread8(this.r16[PC]++);    
+let val = this.memory.uread8(this.r16[PC]++);    
 `;
 
 const registersLD = {
-    'A': { type: 8, src: 'let src = this.r8[A];', dst: 'this.r8[A] = src;' },
-    'F': { type: 8, src: 'let src = this.r8[F];', dst: 'this.r8[F] = src;' },
-    'B': { type: 8, src: 'let src = this.r8[B];', dst: 'this.r8[B] = src;' },
-    'C': { type: 8, src: 'let src = this.r8[C];', dst: 'this.r8[C] = src;' },
-    '(C)': { type: 8, src: 'let src = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], src);' },
-    'D': { type: 8, src: 'let src = this.r8[D];', dst: 'this.r8[D] = src;' },
-    'E': { type: 8, src: 'let src = this.r8[E];', dst: 'this.r8[E] = src;' },
-    'H': { type: 8, src: 'let src = this.r8[H];', dst: 'this.r8[H] = src;' },
-    'L': { type: 8, src: 'let src = this.r8[L];', dst: 'this.r8[L] = src;' },
-    'AF': { type: 16, src: 'let src = this.r16[AF];', dst: 'this.r16[AF] = src;' },
-    'BC': { type: 16, src: 'let src = this.r16[BC];', dst: 'this.r16[BC] = src;' },
-    'DE': { type: 16, src: 'let src = this.r16[DE];', dst: 'this.r16[DE] = src;' },
-    'HL': { type: 16, src: 'let src = this.r16[HL];', dst: 'this.r16[HL] = src;' },
-    'SP': { type: 16, src: 'let src = this.r16[SP];', dst: 'this.r16[SP] = src;' },
-    '(BC)': { type: 8, src: 'let src = this.memory.read8(this.r16[BC]);', dst: 'this.memory.write8(this.r16[BC], src);' },
-    '(DE)': { type: 8, src: 'let src = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], src);' },
-    '(HL)': { type: 8, src: 'let src = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], src);' },
-    'HL\'': { type: 16, src: 'let src = this.r16s[HL];', dst: 'this.r16s[HL] = src;' },
-    'IXh': { type: 8, src: 'let src = this.r8[IXh];', dst: 'this.r8[IXh] = src;' },
-    'IXl': { type: 8, src: 'let src = this.r8[IXl];', dst: 'this.r8[IXl] = src;' },
-    'IX': { type: 16, src: 'let src = this.r16[IX];', dst: 'this.r16[IX] = src;' },
-    'IY': { type: 16, src: 'let src = this.r16[IY];', dst: 'this.r16[IY] = src;' },
-    '(IX+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, src);' },
-    '(IY+o)': { type: 24, src: 'let src = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, src);' },
+    'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;' },
+    'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;' },
+    'B': { type: 8, src: 'let val = this.r8[B];', dst: 'this.r8[B] = val;' },
+    'C': { type: 8, src: 'let val = this.r8[C];', dst: 'this.r8[C] = val;' },
+    '(C)': { type: 8, src: 'let val = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], src);' },
+    'D': { type: 8, src: 'let val = this.r8[D];', dst: 'this.r8[D] = val;' },
+    'E': { type: 8, src: 'let val = this.r8[E];', dst: 'this.r8[E] = val;' },
+    'H': { type: 8, src: 'let val = this.r8[H];', dst: 'this.r8[H] = val;' },
+    'L': { type: 8, src: 'let val = this.r8[L];', dst: 'this.r8[L] = val;' },
+    'AF': { type: 16, src: 'let val = this.r16[AF];', dst: 'this.r16[AF] = val;' },
+    'BC': { type: 16, src: 'let val = this.r16[BC];', dst: 'this.r16[BC] = val;' },
+    'DE': { type: 16, src: 'let val = this.r16[DE];', dst: 'this.r16[DE] = val;' },
+    'HL': { type: 16, src: 'let val = this.r16[HL];', dst: 'this.r16[HL] = val;' },
+    'SP': { type: 16, src: 'let val = this.r16[SP];', dst: 'this.r16[SP] = val;' },
+    '(BC)': { type: 8, src: 'let val = this.memory.read8(this.r16[BC]);', dst: 'this.memory.write8(this.r16[BC], val);' },
+    '(DE)': { type: 8, src: 'let val = this.memory.read8(this.r16[DE]);', dst: 'this.memory.write8(this.r16[DE], val);' },
+    '(HL)': { type: 8, src: 'let val = this.memory.read8(this.r16[HL]);', dst: 'this.memory.write8(this.r16[HL], val);' },
+    'HL\'': { type: 16, src: 'let val = this.r16s[HL];', dst: 'this.r16s[HL] = val;' },
+    'IXh': { type: 8, src: 'let val = this.r8[IXh];', dst: 'this.r8[IXh] = val;' },
+    'IXl': { type: 8, src: 'let val = this.r8[IXl];', dst: 'this.r8[IXl] = val;' },
+    'IX': { type: 16, src: 'let val = this.r16[IX];', dst: 'this.r16[IX] = val;' },
+    'IY': { type: 16, src: 'let val = this.r16[IY];', dst: 'this.r16[IY] = val;' },
+    '(IX+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, val);' },
+    '(IY+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
-    'n': { type: 8, src: 'let src = this.memory.uread8(this.r16[PC]++);', dst: undefined },
+    'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
     '(nn)': { type: 24, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
+const pLookup =	{ 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A'};
+const qLookup =	{ 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A'};
+
 
 
 function generateLDOpcode(r, dst, src, opcode) {
@@ -115,7 +118,7 @@ function generateLDOpcode(r, dst, src, opcode) {
         emitCode(registersLD[dst].dst);
     }
 
-    let instr = r.Instruction.replace(/r/, src).replace(/o/, '${o}').replace(/nn/, 'NN').replace(/n/, '${n}').replace(/NN/, '${nn}');
+    let instr = r.Instruction.replace(/r/, src).replace(/o/, '${o}').replace(/,nn/, ',${src}').replace(/,n/, ',${src}');
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitCode(`this.log(addr, \`${instr}\`)`);
@@ -131,7 +134,28 @@ function fillRInOpcode(opcode, r) {
         }
         return `${o}`;
     })
+}
 
+function fillPInOpcode(opcode, p) {
+    let regex = /(?<base>\w+)\+p/
+    return opcode.map(o => {
+        let match = regex.exec(o);
+        if (match) {
+            return `${(parseInt(match.groups['base'], 16) + parseInt(p)).toString(16)}`;
+        }
+        return `${o}`;
+    })
+}
+
+function fillQInOpcode(opcode, q) {
+    let regex = /(?<base>\w+)\+q/
+    return opcode.map(o => {
+        let match = regex.exec(o);
+        if (match) {
+            return `${(parseInt(match.groups['base'], 16) + parseInt(q)).toString(16)}`;
+        }
+        return `${o}`;
+    })
 }
 
 function generateLD(row) {
