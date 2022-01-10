@@ -76,33 +76,49 @@ const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
 
 function generateLDOpcode(r, dst, src, opcode) {
     if (opcode[0] === 'ED') {
-        emitCode(`this.addInstructionED(${opcode[1]}, () => {`);
+        emitCode(`this.addInstructionED(0x${opcode[1]}, () => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     } else if (opcode[0] === 'CD') {
-        emitCode(`this.addInstructionCD(${opcode[1]}, () => {`);
+        emitCode(`this.addInstructionCD(0x${opcode[1]}, () => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     } else if (opcode[0] === 'DD') {
         if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionDDCD(${opcode[1]}, () => {`);
+            emitCode(`this.addInstructionDDCD(0x${opcode[2]}, () => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
-            emitCode(`this.addInstructionDD(${opcode[1]}, () => {`);
+            emitCode(`this.addInstructionDD(0x${opcode[1]}, () => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+            if (opcode[2] == 'o') {
+                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
+            }
         }
     } else if (opcode[0] === 'FD') {
         if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionFDCD(${opcode[1]}, () => {`);
+            emitCode(`this.addInstructionFDCD(0x${opcode[1]}, () => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
-            emitCode(`this.addInstructionFD(${opcode[1]}, () => {`);
+            emitCode(`this.addInstructionFD(0x${opcode[1]}, () => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+            if (opcode[2] == 'o') {
+                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
+            }
         }
     } else {
-        emitCode(`this.addInstruction(${opcode}, () => {`);
+        emitCode(`this.addInstruction(0x${opcode}, () => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     }
-    emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+
     emitCode(registersLD[src].src);
     if (registersLD[src].type == 16) {
         emitCode(registersLD[dst].dst16);
     } else {
         emitCode(registersLD[dst].dst);
     }
+
+    let instr = r.Instruction.replace(/r/, src).replace(/o/, '${o}').replace(/nn/, 'NN').replace(/n/, '${n}').replace(/NN/, '${nn}');
+
     emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitCode(`this.log(addr, '${r.Instruction}')`);
+    emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
 
@@ -111,9 +127,9 @@ function fillRInOpcode(opcode, r) {
     return opcode.map(o => {
         let match = regex.exec(o);
         if (match) {
-            return `0x${(parseInt(match.groups['base'], 16) + parseInt(r)).toString(16)}`;
+            return `${(parseInt(match.groups['base'], 16) + parseInt(r)).toString(16)}`;
         }
-        return `0x${o}`;
+        return `${o}`;
     })
 
 }
@@ -127,7 +143,7 @@ function generateLD(row) {
 
     let dst = match.groups["operand"];
     let src = match.groups["operand2"];
-    let opcode = row.Opcode.replace(/n/g, '').trim().split(' ');
+    let opcode = row.Opcode.trim().split(' ');
     console.log(opcode);
 
     if (src == 'r') {
