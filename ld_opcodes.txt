@@ -345,7 +345,7 @@ let val = this.memory.uread16(nn);
 
 this.r8[A] = val;
 this.cycles += 13;
-this.log(addr, `LD A,(nn)`)
+this.log(addr, `LD A,(${val})`)
 });
 
 this.addInstruction(0x3E, (addr: number) => {
@@ -412,38 +412,6 @@ this.cycles += 4;
 this.log(addr, `LD A,A`)
 });
 
-this.addInstructionDD(0x78, (addr: number) => {
-// LD A,IXp Opcode: DD 78+p
-let val = this.r8[B];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IXp`)
-});
-
-this.addInstructionDD(0x79, (addr: number) => {
-// LD A,IXp Opcode: DD 78+p
-let val = this.r8[C];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IXp`)
-});
-
-this.addInstructionDD(0x7a, (addr: number) => {
-// LD A,IXp Opcode: DD 78+p
-let val = this.r8[D];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IXp`)
-});
-
-this.addInstructionDD(0x7b, (addr: number) => {
-// LD A,IXp Opcode: DD 78+p
-let val = this.r8[E];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IXp`)
-});
-
 this.addInstructionDD(0x7c, (addr: number) => {
 // LD A,IXp Opcode: DD 78+p
 let val = this.r8[IXh];
@@ -460,46 +428,6 @@ this.cycles += 8;
 this.log(addr, `LD A,IXp`)
 });
 
-this.addInstructionDD(0x7f, (addr: number) => {
-// LD A,IXp Opcode: DD 78+p
-let val = this.r8[A];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IXp`)
-});
-
-this.addInstructionFD(0x78, (addr: number) => {
-// LD A,IYq Opcode: FD 78+q
-let val = this.r8[B];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IYq`)
-});
-
-this.addInstructionFD(0x79, (addr: number) => {
-// LD A,IYq Opcode: FD 78+q
-let val = this.r8[C];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IYq`)
-});
-
-this.addInstructionFD(0x7a, (addr: number) => {
-// LD A,IYq Opcode: FD 78+q
-let val = this.r8[D];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IYq`)
-});
-
-this.addInstructionFD(0x7b, (addr: number) => {
-// LD A,IYq Opcode: FD 78+q
-let val = this.r8[E];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IYq`)
-});
-
 this.addInstructionFD(0x7c, (addr: number) => {
 // LD A,IYq Opcode: FD 78+q
 let val = this.r8[IXh];
@@ -511,14 +439,6 @@ this.log(addr, `LD A,IYq`)
 this.addInstructionFD(0x7d, (addr: number) => {
 // LD A,IYq Opcode: FD 78+q
 let val = this.r8[IXl];
-this.r8[A] = val;
-this.cycles += 8;
-this.log(addr, `LD A,IYq`)
-});
-
-this.addInstructionFD(0x7f, (addr: number) => {
-// LD A,IYq Opcode: FD 78+q
-let val = this.r8[A];
 this.r8[A] = val;
 this.cycles += 8;
 this.log(addr, `LD A,IYq`)
@@ -630,38 +550,6 @@ this.cycles += 4;
 this.log(addr, `LD B,A`)
 });
 
-this.addInstructionDD(0x40, (addr: number) => {
-// LD B,IXp Opcode: DD 40+p
-let val = this.r8[B];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IXp`)
-});
-
-this.addInstructionDD(0x41, (addr: number) => {
-// LD B,IXp Opcode: DD 40+p
-let val = this.r8[C];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IXp`)
-});
-
-this.addInstructionDD(0x42, (addr: number) => {
-// LD B,IXp Opcode: DD 40+p
-let val = this.r8[D];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IXp`)
-});
-
-this.addInstructionDD(0x43, (addr: number) => {
-// LD B,IXp Opcode: DD 40+p
-let val = this.r8[E];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IXp`)
-});
-
 this.addInstructionDD(0x44, (addr: number) => {
 // LD B,IXp Opcode: DD 40+p
 let val = this.r8[IXh];
@@ -676,46 +564,6 @@ let val = this.r8[IXl];
 this.r8[B] = val;
 this.cycles += 8;
 this.log(addr, `LD B,IXp`)
-});
-
-this.addInstructionDD(0x47, (addr: number) => {
-// LD B,IXp Opcode: DD 40+p
-let val = this.r8[A];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IXp`)
-});
-
-this.addInstructionFD(0x40, (addr: number) => {
-// LD B,IYq Opcode: FD 40+q
-let val = this.r8[B];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IYq`)
-});
-
-this.addInstructionFD(0x41, (addr: number) => {
-// LD B,IYq Opcode: FD 40+q
-let val = this.r8[C];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IYq`)
-});
-
-this.addInstructionFD(0x42, (addr: number) => {
-// LD B,IYq Opcode: FD 40+q
-let val = this.r8[D];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IYq`)
-});
-
-this.addInstructionFD(0x43, (addr: number) => {
-// LD B,IYq Opcode: FD 40+q
-let val = this.r8[E];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IYq`)
 });
 
 this.addInstructionFD(0x44, (addr: number) => {
@@ -734,14 +582,6 @@ this.cycles += 8;
 this.log(addr, `LD B,IYq`)
 });
 
-this.addInstructionFD(0x47, (addr: number) => {
-// LD B,IYq Opcode: FD 40+q
-let val = this.r8[A];
-this.r8[B] = val;
-this.cycles += 8;
-this.log(addr, `LD B,IYq`)
-});
-
 this.addInstructionED(0x4B, (addr: number) => {
 // LD BC,(nn) Opcode: ED 4B nn nn
 
@@ -751,7 +591,7 @@ let val = this.memory.uread16(nn);
 
 this.r16[BC] = val;
 this.cycles += 20;
-this.log(addr, `LD BC,(nn)`)
+this.log(addr, `LD BC,(${val})`)
 });
 
 this.addInstruction(0x01, (addr: number) => {
@@ -855,38 +695,6 @@ this.cycles += 4;
 this.log(addr, `LD C,A`)
 });
 
-this.addInstructionDD(0x48, (addr: number) => {
-// LD C,IXp Opcode: DD 48+p
-let val = this.r8[B];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IXp`)
-});
-
-this.addInstructionDD(0x49, (addr: number) => {
-// LD C,IXp Opcode: DD 48+p
-let val = this.r8[C];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IXp`)
-});
-
-this.addInstructionDD(0x4a, (addr: number) => {
-// LD C,IXp Opcode: DD 48+p
-let val = this.r8[D];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IXp`)
-});
-
-this.addInstructionDD(0x4b, (addr: number) => {
-// LD C,IXp Opcode: DD 48+p
-let val = this.r8[E];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IXp`)
-});
-
 this.addInstructionDD(0x4c, (addr: number) => {
 // LD C,IXp Opcode: DD 48+p
 let val = this.r8[IXh];
@@ -903,46 +711,6 @@ this.cycles += 8;
 this.log(addr, `LD C,IXp`)
 });
 
-this.addInstructionDD(0x4f, (addr: number) => {
-// LD C,IXp Opcode: DD 48+p
-let val = this.r8[A];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IXp`)
-});
-
-this.addInstructionFD(0x48, (addr: number) => {
-// LD C,IYq Opcode: FD 48+q
-let val = this.r8[B];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IYq`)
-});
-
-this.addInstructionFD(0x49, (addr: number) => {
-// LD C,IYq Opcode: FD 48+q
-let val = this.r8[C];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IYq`)
-});
-
-this.addInstructionFD(0x4a, (addr: number) => {
-// LD C,IYq Opcode: FD 48+q
-let val = this.r8[D];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IYq`)
-});
-
-this.addInstructionFD(0x4b, (addr: number) => {
-// LD C,IYq Opcode: FD 48+q
-let val = this.r8[E];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IYq`)
-});
-
 this.addInstructionFD(0x4c, (addr: number) => {
 // LD C,IYq Opcode: FD 48+q
 let val = this.r8[IXh];
@@ -954,14 +722,6 @@ this.log(addr, `LD C,IYq`)
 this.addInstructionFD(0x4d, (addr: number) => {
 // LD C,IYq Opcode: FD 48+q
 let val = this.r8[IXl];
-this.r8[C] = val;
-this.cycles += 8;
-this.log(addr, `LD C,IYq`)
-});
-
-this.addInstructionFD(0x4f, (addr: number) => {
-// LD C,IYq Opcode: FD 48+q
-let val = this.r8[A];
 this.r8[C] = val;
 this.cycles += 8;
 this.log(addr, `LD C,IYq`)
@@ -1057,38 +817,6 @@ this.cycles += 4;
 this.log(addr, `LD D,A`)
 });
 
-this.addInstructionDD(0x50, (addr: number) => {
-// LD D,IXp Opcode: DD 50+p
-let val = this.r8[B];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IXp`)
-});
-
-this.addInstructionDD(0x51, (addr: number) => {
-// LD D,IXp Opcode: DD 50+p
-let val = this.r8[C];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IXp`)
-});
-
-this.addInstructionDD(0x52, (addr: number) => {
-// LD D,IXp Opcode: DD 50+p
-let val = this.r8[D];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IXp`)
-});
-
-this.addInstructionDD(0x53, (addr: number) => {
-// LD D,IXp Opcode: DD 50+p
-let val = this.r8[E];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IXp`)
-});
-
 this.addInstructionDD(0x54, (addr: number) => {
 // LD D,IXp Opcode: DD 50+p
 let val = this.r8[IXh];
@@ -1103,46 +831,6 @@ let val = this.r8[IXl];
 this.r8[D] = val;
 this.cycles += 8;
 this.log(addr, `LD D,IXp`)
-});
-
-this.addInstructionDD(0x57, (addr: number) => {
-// LD D,IXp Opcode: DD 50+p
-let val = this.r8[A];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IXp`)
-});
-
-this.addInstructionFD(0x50, (addr: number) => {
-// LD D,IYq Opcode: FD 50+q
-let val = this.r8[B];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IYq`)
-});
-
-this.addInstructionFD(0x51, (addr: number) => {
-// LD D,IYq Opcode: FD 50+q
-let val = this.r8[C];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IYq`)
-});
-
-this.addInstructionFD(0x52, (addr: number) => {
-// LD D,IYq Opcode: FD 50+q
-let val = this.r8[D];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IYq`)
-});
-
-this.addInstructionFD(0x53, (addr: number) => {
-// LD D,IYq Opcode: FD 50+q
-let val = this.r8[E];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IYq`)
 });
 
 this.addInstructionFD(0x54, (addr: number) => {
@@ -1161,14 +849,6 @@ this.cycles += 8;
 this.log(addr, `LD D,IYq`)
 });
 
-this.addInstructionFD(0x57, (addr: number) => {
-// LD D,IYq Opcode: FD 50+q
-let val = this.r8[A];
-this.r8[D] = val;
-this.cycles += 8;
-this.log(addr, `LD D,IYq`)
-});
-
 this.addInstructionED(0x5B, (addr: number) => {
 // LD DE,(nn) Opcode: ED 5B nn nn
 
@@ -1178,7 +858,7 @@ let val = this.memory.uread16(nn);
 
 this.r16[DE] = val;
 this.cycles += 20;
-this.log(addr, `LD DE,(nn)`)
+this.log(addr, `LD DE,(${val})`)
 });
 
 this.addInstruction(0x11, (addr: number) => {
@@ -1282,38 +962,6 @@ this.cycles += 4;
 this.log(addr, `LD E,A`)
 });
 
-this.addInstructionDD(0x58, (addr: number) => {
-// LD E,IXp Opcode: DD 58+p
-let val = this.r8[B];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IXp`)
-});
-
-this.addInstructionDD(0x59, (addr: number) => {
-// LD E,IXp Opcode: DD 58+p
-let val = this.r8[C];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IXp`)
-});
-
-this.addInstructionDD(0x5a, (addr: number) => {
-// LD E,IXp Opcode: DD 58+p
-let val = this.r8[D];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IXp`)
-});
-
-this.addInstructionDD(0x5b, (addr: number) => {
-// LD E,IXp Opcode: DD 58+p
-let val = this.r8[E];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IXp`)
-});
-
 this.addInstructionDD(0x5c, (addr: number) => {
 // LD E,IXp Opcode: DD 58+p
 let val = this.r8[IXh];
@@ -1330,46 +978,6 @@ this.cycles += 8;
 this.log(addr, `LD E,IXp`)
 });
 
-this.addInstructionDD(0x5f, (addr: number) => {
-// LD E,IXp Opcode: DD 58+p
-let val = this.r8[A];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IXp`)
-});
-
-this.addInstructionFD(0x58, (addr: number) => {
-// LD E,IYq Opcode: FD 58+q
-let val = this.r8[B];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IYq`)
-});
-
-this.addInstructionFD(0x59, (addr: number) => {
-// LD E,IYq Opcode: FD 58+q
-let val = this.r8[C];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IYq`)
-});
-
-this.addInstructionFD(0x5a, (addr: number) => {
-// LD E,IYq Opcode: FD 58+q
-let val = this.r8[D];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IYq`)
-});
-
-this.addInstructionFD(0x5b, (addr: number) => {
-// LD E,IYq Opcode: FD 58+q
-let val = this.r8[E];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IYq`)
-});
-
 this.addInstructionFD(0x5c, (addr: number) => {
 // LD E,IYq Opcode: FD 58+q
 let val = this.r8[IXh];
@@ -1381,14 +989,6 @@ this.log(addr, `LD E,IYq`)
 this.addInstructionFD(0x5d, (addr: number) => {
 // LD E,IYq Opcode: FD 58+q
 let val = this.r8[IXl];
-this.r8[E] = val;
-this.cycles += 8;
-this.log(addr, `LD E,IYq`)
-});
-
-this.addInstructionFD(0x5f, (addr: number) => {
-// LD E,IYq Opcode: FD 58+q
-let val = this.r8[A];
 this.r8[E] = val;
 this.cycles += 8;
 this.log(addr, `LD E,IYq`)
@@ -1493,7 +1093,7 @@ let val = this.memory.uread16(nn);
 
 this.r16[HL] = val;
 this.cycles += 16;
-this.log(addr, `LD HL,(nn)`)
+this.log(addr, `LD HL,(${val})`)
 });
 
 this.addInstruction(0x21, (addr: number) => {
@@ -1524,7 +1124,7 @@ let val = this.memory.uread16(nn);
 
 this.r16[IX] = val;
 this.cycles += 20;
-this.log(addr, `LD IX,(nn)`)
+this.log(addr, `LD IX,(${val})`)
 });
 
 this.addInstructionDD(0x21, (addr: number) => {
@@ -1546,38 +1146,6 @@ this.cycles += 11;
 this.log(addr, `LD IXh,${val}`)
 });
 
-this.addInstructionDD(0x60, (addr: number) => {
-// LD IXh,p Opcode: DD 60+p
-let val = this.r8[B];
-this.r8[IXh] = val;
-this.cycles += 8;
-this.log(addr, `LD IXh,p`)
-});
-
-this.addInstructionDD(0x61, (addr: number) => {
-// LD IXh,p Opcode: DD 60+p
-let val = this.r8[C];
-this.r8[IXh] = val;
-this.cycles += 8;
-this.log(addr, `LD IXh,p`)
-});
-
-this.addInstructionDD(0x62, (addr: number) => {
-// LD IXh,p Opcode: DD 60+p
-let val = this.r8[D];
-this.r8[IXh] = val;
-this.cycles += 8;
-this.log(addr, `LD IXh,p`)
-});
-
-this.addInstructionDD(0x63, (addr: number) => {
-// LD IXh,p Opcode: DD 60+p
-let val = this.r8[E];
-this.r8[IXh] = val;
-this.cycles += 8;
-this.log(addr, `LD IXh,p`)
-});
-
 this.addInstructionDD(0x64, (addr: number) => {
 // LD IXh,p Opcode: DD 60+p
 let val = this.r8[IXh];
@@ -1594,52 +1162,12 @@ this.cycles += 8;
 this.log(addr, `LD IXh,p`)
 });
 
-this.addInstructionDD(0x67, (addr: number) => {
-// LD IXh,p Opcode: DD 60+p
-let val = this.r8[A];
-this.r8[IXh] = val;
-this.cycles += 8;
-this.log(addr, `LD IXh,p`)
-});
-
 this.addInstructionDD(0x2E, (addr: number) => {
 // LD IXl,n Opcode: DD 2E n
 let val = this.memory.uread8(this.r16[PC]++);
 this.r8[IXl] = val;
 this.cycles += 11;
 this.log(addr, `LD IXl,${val}`)
-});
-
-this.addInstructionDD(0x68, (addr: number) => {
-// LD IXl,p Opcode: DD 68+p
-let val = this.r8[B];
-this.r8[IXl] = val;
-this.cycles += 8;
-this.log(addr, `LD IXl,p`)
-});
-
-this.addInstructionDD(0x69, (addr: number) => {
-// LD IXl,p Opcode: DD 68+p
-let val = this.r8[C];
-this.r8[IXl] = val;
-this.cycles += 8;
-this.log(addr, `LD IXl,p`)
-});
-
-this.addInstructionDD(0x6a, (addr: number) => {
-// LD IXl,p Opcode: DD 68+p
-let val = this.r8[D];
-this.r8[IXl] = val;
-this.cycles += 8;
-this.log(addr, `LD IXl,p`)
-});
-
-this.addInstructionDD(0x6b, (addr: number) => {
-// LD IXl,p Opcode: DD 68+p
-let val = this.r8[E];
-this.r8[IXl] = val;
-this.cycles += 8;
-this.log(addr, `LD IXl,p`)
 });
 
 this.addInstructionDD(0x6c, (addr: number) => {
@@ -1658,14 +1186,6 @@ this.cycles += 8;
 this.log(addr, `LD IXl,p`)
 });
 
-this.addInstructionDD(0x6f, (addr: number) => {
-// LD IXl,p Opcode: DD 68+p
-let val = this.r8[A];
-this.r8[IXl] = val;
-this.cycles += 8;
-this.log(addr, `LD IXl,p`)
-});
-
 this.addInstructionFD(0x2A, (addr: number) => {
 // LD IY,(nn) Opcode: FD 2A nn nn
 
@@ -1675,7 +1195,7 @@ let val = this.memory.uread16(nn);
 
 this.r16[IY] = val;
 this.cycles += 20;
-this.log(addr, `LD IY,(nn)`)
+this.log(addr, `LD IY,(${val})`)
 });
 
 this.addInstructionFD(0x21, (addr: number) => {
@@ -1697,38 +1217,6 @@ this.cycles += 11;
 this.log(addr, `LD IYh,${val}`)
 });
 
-this.addInstructionFD(0x60, (addr: number) => {
-// LD IYh,q Opcode: FD 60+q
-let val = this.r8[B];
-this.r8[IYh] = val;
-this.cycles += 8;
-this.log(addr, `LD IYh,q`)
-});
-
-this.addInstructionFD(0x61, (addr: number) => {
-// LD IYh,q Opcode: FD 60+q
-let val = this.r8[C];
-this.r8[IYh] = val;
-this.cycles += 8;
-this.log(addr, `LD IYh,q`)
-});
-
-this.addInstructionFD(0x62, (addr: number) => {
-// LD IYh,q Opcode: FD 60+q
-let val = this.r8[D];
-this.r8[IYh] = val;
-this.cycles += 8;
-this.log(addr, `LD IYh,q`)
-});
-
-this.addInstructionFD(0x63, (addr: number) => {
-// LD IYh,q Opcode: FD 60+q
-let val = this.r8[E];
-this.r8[IYh] = val;
-this.cycles += 8;
-this.log(addr, `LD IYh,q`)
-});
-
 this.addInstructionFD(0x64, (addr: number) => {
 // LD IYh,q Opcode: FD 60+q
 let val = this.r8[IXh];
@@ -1745,52 +1233,12 @@ this.cycles += 8;
 this.log(addr, `LD IYh,q`)
 });
 
-this.addInstructionFD(0x67, (addr: number) => {
-// LD IYh,q Opcode: FD 60+q
-let val = this.r8[A];
-this.r8[IYh] = val;
-this.cycles += 8;
-this.log(addr, `LD IYh,q`)
-});
-
 this.addInstructionFD(0x2E, (addr: number) => {
 // LD IYl,n Opcode: FD 2E n
 let val = this.memory.uread8(this.r16[PC]++);
 this.r8[IYl] = val;
 this.cycles += 11;
 this.log(addr, `LD IYl,${val}`)
-});
-
-this.addInstructionFD(0x68, (addr: number) => {
-// LD IYl,q Opcode: FD 68+q
-let val = this.r8[B];
-this.r8[IYl] = val;
-this.cycles += 8;
-this.log(addr, `LD IYl,q`)
-});
-
-this.addInstructionFD(0x69, (addr: number) => {
-// LD IYl,q Opcode: FD 68+q
-let val = this.r8[C];
-this.r8[IYl] = val;
-this.cycles += 8;
-this.log(addr, `LD IYl,q`)
-});
-
-this.addInstructionFD(0x6a, (addr: number) => {
-// LD IYl,q Opcode: FD 68+q
-let val = this.r8[D];
-this.r8[IYl] = val;
-this.cycles += 8;
-this.log(addr, `LD IYl,q`)
-});
-
-this.addInstructionFD(0x6b, (addr: number) => {
-// LD IYl,q Opcode: FD 68+q
-let val = this.r8[E];
-this.r8[IYl] = val;
-this.cycles += 8;
-this.log(addr, `LD IYl,q`)
 });
 
 this.addInstructionFD(0x6c, (addr: number) => {
@@ -1804,14 +1252,6 @@ this.log(addr, `LD IYl,q`)
 this.addInstructionFD(0x6d, (addr: number) => {
 // LD IYl,q Opcode: FD 68+q
 let val = this.r8[IXl];
-this.r8[IYl] = val;
-this.cycles += 8;
-this.log(addr, `LD IYl,q`)
-});
-
-this.addInstructionFD(0x6f, (addr: number) => {
-// LD IYl,q Opcode: FD 68+q
-let val = this.r8[A];
 this.r8[IYl] = val;
 this.cycles += 8;
 this.log(addr, `LD IYl,q`)
@@ -1924,13 +1364,13 @@ let val = this.memory.uread16(nn);
 
 this.r16[SP] = val;
 this.cycles += 20;
-this.log(addr, `LD SP,(nn)`)
+this.log(addr, `LD SP,(${val})`)
 });
 
 this.addInstruction(0xF9, (addr: number) => {
 // LD SP,HL Opcode: F9
 let val = this.r16[HL];
-undefined
+this.r16[SP] = val;
 this.cycles += 6;
 this.log(addr, `LD SP,HL`)
 });
@@ -1938,7 +1378,7 @@ this.log(addr, `LD SP,HL`)
 this.addInstructionDD(0xF9, (addr: number) => {
 // LD SP,IX Opcode: DD F9
 let val = this.r16[IX];
-undefined
+this.r16[SP] = val;
 this.cycles += 10;
 this.log(addr, `LD SP,IX`)
 });
@@ -1946,7 +1386,7 @@ this.log(addr, `LD SP,IX`)
 this.addInstructionFD(0xF9, (addr: number) => {
 // LD SP,IY Opcode: FD F9
 let val = this.r16[IY];
-undefined
+this.r16[SP] = val;
 this.cycles += 10;
 this.log(addr, `LD SP,IY`)
 });

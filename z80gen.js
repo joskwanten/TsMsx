@@ -71,16 +71,71 @@ const registersLD = {
     '(IY+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
-    '(nn)': { type: 24, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
+    '(nn)': { type: 8, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
-const pLookup =	{ 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A'};
+const pLookup =	{/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/};
 const qLookup =	{ 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A'};
 
-
+function generateLambda(r, opcode) {
+    if (opcode[0] === 'ED') {
+        emitCode(`this.addInstructionED(0x${opcode[1]}, (addr: number) => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+    } else if (opcode[0] === 'CD') {
+        emitCode(`this.addInstructionCD(0x${opcode[1]}, (addr: number) => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+    } else if (opcode[0] === 'DD') {
+        if (opcode[1] === 'CD') {
+            emitCode(`this.addInstructionDDCD(0x${opcode[2]}, (addr: number) => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+        } else {
+            emitCode(`this.addInstructionDD(0x${opcode[1]}, (addr: number) => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+            if (opcode[2] == 'o') {
+                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
+            }
+        }
+    } else if (opcode[0] === 'FD') {
+        if (opcode[1] === 'CD') {
+            emitCode(`this.addInstructionFDCD(0x${opcode[1]}, (addr: number) => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+        } else {
+            emitCode(`this.addInstructionFD(0x${opcode[1]}, (addr: number) => {`);
+            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+            if (opcode[2] == 'o') {
+                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
+            }
+        }
+    } else {
+        emitCode(`this.addInstruction(0x${opcode[0]}, (addr: number) => {`);
+        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+    }
+}
 
 function generateLDOpcode(r, dst, src, opcode) {
+    generateLambda(r, opcode);
+
+    emitCode(registersLD[src].src);
+    if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
+        emitCode(registersLD[dst].dst16);
+    } else {
+        emitCode(registersLD[dst].dst);
+    }
+
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/,nn/, ',${val}')
+        .replace(/,\(nn\)/, ',(${val})')
+        .replace(/,n/, ',${val}');
+
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+
+function generateJPOpcode(r, dst, src, opcode) {
     if (opcode[0] === 'ED') {
         emitCode(`this.addInstructionED(0x${opcode[1]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
@@ -115,18 +170,23 @@ function generateLDOpcode(r, dst, src, opcode) {
     }
 
     emitCode(registersLD[src].src);
-    if (registersLD[src].type == 16) {
+    if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
         emitCode(registersLD[dst].dst16);
     } else {
         emitCode(registersLD[dst].dst);
     }
 
-    let instr = r.Instruction.replace(/r/, src).replace(/o/, '${o}').replace(/,nn/, ',${val}').replace(/,n/, ',${val}');
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/,nn/, ',${val}')
+        .replace(/,\(nn\)/, ',(${val})')
+        .replace(/,n/, ',${val}');
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
+
 
 function fillRInOpcode(opcode, r) {
     let regex = /(?<base>\w+)\+r/
@@ -212,5 +272,17 @@ fs.createReadStream('Opcodes.csv')
     .on('end', () => {
         results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
             generateLD(r);
-        })
-    });    
+        });
+        // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+        //     generateLD(r);
+        // });
+    });
+
+// fs.createReadStream('Opcodes.csv')
+//     .pipe(csv({ separator: ';' }))
+//     .on('data', (data) => results.push(data))
+//     .on('end', () => {
+//         results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+//             generateLD(r);
+//         })
+//     });  
