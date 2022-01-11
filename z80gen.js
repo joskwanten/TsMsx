@@ -2,6 +2,7 @@
 
 const csv = require('csv-parser')
 const fs = require('fs');
+const { emit } = require('process');
 const results = [];
 
 let mnemonic = /(?<opcode>\w+)( )?(?<operand>(\()?\w+(\+o)?(\))?)(,?)(?<operand2>(\()?\w+(\+o)?([\),'])?)?$/
@@ -15,22 +16,16 @@ function emitComment(comment) {
     emitCode(`// ${comment}`);
 }
 
-let nn_read = `
-let val = this.memory.uread16(this.r16[PC]);
-this.r16[PC] += 2;
-`;
+let nn_read = `let val = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;`;
 
-let nn_read_ind = `
-let nn = this.memory.uread16(this.r16[PC]);
+let nn_read_ind = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-let val = this.memory.uread16(nn);
-`;
+let val = this.memory.uread16(nn);`;
 
-let nn_write_ind8 = `
-let nn = this.memory.uread16(this.r16[PC]);
+let nn_write_ind8 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-this.memory.uwrite8(nn, val);
-`;
+this.memory.uwrite8(nn, val);`;
 
 let nn_write_ind16 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
@@ -39,6 +34,17 @@ this.memory.uwrite16(nn, val);`;
 let n_read = `
 let val = this.memory.uread8(this.r16[PC]++);    
 `;
+
+const conditions = {
+    C: '(this.r8[F] & Flags.C)', 
+    NC: '!(this.r8[F] & Flags.C)',
+    Z: '(this.r8[F] & Flags.Z)',
+    NZ: '!(this.r8[F] & Flags.Z)',
+    M: '(this.r8[F] & Flags.S)',
+    P: '!(this.r8[F] & Flags.S)',
+    PE: '(this.r8[F] & Flags.PV)',
+    PO: '!(this.r8[F] & Flags.PV)',
+}
 
 const registersLD = {
     'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;' },
@@ -60,6 +66,8 @@ const registersLD = {
     '(BC)': { type: 8, src: 'let val = this.memory.uread8(this.r16[BC]);', dst: 'this.memory.uwrite8(this.r16[BC], val);' },
     '(DE)': { type: 8, src: 'let val = this.memory.uread8(this.r16[DE]);', dst: 'this.memory.uwrite8(this.r16[DE], val);' },
     '(HL)': { type: 8, src: 'let val = this.memory.uread8(this.r16[HL]);', dst: 'this.memory.uwrite8(this.r16[HL], val);' },
+    '(IX)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IX]);', dst: 'this.memory.uwrite8(this.r16[IX], val);' },
+    '(IY)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY]);', dst: 'this.memory.uwrite8(this.r16[IY], val);' },
     'HL\'': { type: 16, src: 'let val = this.r16s[HL];', dst: 'this.r16s[HL] = val;' },
     'IXh': { type: 8, src: 'let val = this.r8[IXh];', dst: 'this.r8[IXh] = val;' },
     'IXl': { type: 8, src: 'let val = this.r8[IXl];', dst: 'this.r8[IXl] = val;' },
@@ -135,54 +143,48 @@ function generateLDOpcode(r, dst, src, opcode) {
 }
 
 
-function generateJPOpcode(r, dst, src, opcode) {
-    if (opcode[0] === 'ED') {
-        emitCode(`this.addInstructionED(0x${opcode[1]}, (addr: number) => {`);
-        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-    } else if (opcode[0] === 'CD') {
-        emitCode(`this.addInstructionCD(0x${opcode[1]}, (addr: number) => {`);
-        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-    } else if (opcode[0] === 'DD') {
-        if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionDDCD(0x${opcode[2]}, (addr: number) => {`);
-            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-        } else {
-            emitCode(`this.addInstructionDD(0x${opcode[1]}, (addr: number) => {`);
-            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-            if (opcode[2] == 'o') {
-                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
-            }
-        }
-    } else if (opcode[0] === 'FD') {
-        if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionFDCD(0x${opcode[1]}, (addr: number) => {`);
-            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-        } else {
-            emitCode(`this.addInstructionFD(0x${opcode[1]}, (addr: number) => {`);
-            emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-            if (opcode[2] == 'o') {
-                emitCode(`let o = this.memory.uread8(this.r16[PC]++);`);
-            }
-        }
-    } else {
-        emitCode(`this.addInstruction(0x${opcode[0]}, (addr: number) => {`);
-        emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-    }
-
+function generateJPOpcode(r, condition, src, opcode) {
+    generateLambda(r, opcode);
     emitCode(registersLD[src].src);
-    if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
-        emitCode(registersLD[dst].dst16);
-    } else {
-        emitCode(registersLD[dst].dst);
-    }
 
     let instr = r.Instruction.replace(/r/, src)
         .replace(/o/, '${o}')
-        .replace(/,nn/, ',${val}')
-        .replace(/,\(nn\)/, ',(${val})')
-        .replace(/,n/, ',${val}');
+        .replace(/nn/, '${val}');
 
+    if (condition) { 
+        emitCode(`if (${conditions[condition]}) {`);;
+        emitCode(`this.r16[PC] = val;`)
+        emitCode(`}`);
+    } else {
+        emitCode(`this.r16[PC] = val;`)
+    }
     emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+function generateJROpcode(r, condition, src, opcode) {
+    
+    let instr = r.Instruction.replace(/r/, src)
+    .replace(/o/, '${o}')
+    .replace(/nn/, '${val}');
+
+    let timings = r.TimingZ80.split('/');
+
+    generateLambda(r, opcode);
+    emitCode(`let o = this.memory.read8(this.r16[PC]++);`);
+
+    if (condition) { 
+        emitCode(`if (${conditions[condition]}) {`);;
+        emitCode(`this.r16[PC] += o;`)
+        emitCode(`this.cycles += ${timings[0]};`);
+        emitCode(`} else {`);
+        emitCode(`this.cycles += ${timings[1]};`);
+    } else {
+        emitCode(`this.r16[PC] = val;`);
+        emitCode(`this.cycles += ${r.TimingZ80};`);
+    }
+    
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
@@ -266,16 +268,40 @@ function generateLD(row) {
     }
 }
 
+function generateJPJR(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let condition = match.groups["operand"];
+    let src = match.groups["operand2"];
+
+    if (!src) {
+        src = condition;
+        condition = undefined;
+    }
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+   
+    if (match.groups['opcode'] == "JP") {
+        generateJPOpcode(row, condition, src, opcode);
+    } else {
+        generateJROpcode(row, condition, src, opcode);
+    }
+}
+
 fs.createReadStream('Opcodes.csv')
     .pipe(csv({ separator: ';' }))
     .on('data', (data) => results.push(data))
     .on('end', () => {
-        results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-            generateLD(r);
-        });
-        // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+        // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
         //     generateLD(r);
         // });
+        results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+            generateJPJR(r);
+        });
     });
 
 // fs.createReadStream('Opcodes.csv')
