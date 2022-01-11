@@ -90,12 +90,12 @@ function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
         emitCode(`this.addInstructionED(0x${opcode[1]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-    } else if (opcode[0] === 'CD') {
-        emitCode(`this.addInstructionCD(0x${opcode[1]}, (addr: number) => {`);
+    } else if (opcode[0] === 'CB') {
+        emitCode(`this.addInstructionCB(0x${opcode[1]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     } else if (opcode[0] === 'DD') {
         if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionDDCD(0x${opcode[2]}, (addr: number) => {`);
+            emitCode(`this.addInstructionDDCB(0x${opcode[2]}, (addr: number) => {`);
             emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
             emitCode(`this.addInstructionDD(0x${opcode[1]}, (addr: number) => {`);
@@ -105,8 +105,8 @@ function generateLambda(r, opcode) {
             }
         }
     } else if (opcode[0] === 'FD') {
-        if (opcode[1] === 'CD') {
-            emitCode(`this.addInstructionFDCD(0x${opcode[1]}, (addr: number) => {`);
+        if (opcode[1] === 'CB') {
+            emitCode(`this.addInstructionFDCB(0x${opcode[1]}, (addr: number) => {`);
             emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
             emitCode(`this.addInstructionFD(0x${opcode[1]}, (addr: number) => {`);
@@ -163,25 +163,36 @@ function generateJPOpcode(r, condition, src, opcode) {
     emitCode(`});\n`);
 }
 
-function generateJROpcode(r, condition, src, opcode) {
+function generateJRAndCallOpcode(r, condition, src, opcode) {
     
     let instr = r.Instruction.replace(/r/, src)
     .replace(/o/, '${o}')
-    .replace(/nn/, '${val}');
+    .replace(/nn/, '${nn}');
 
     let timings = r.TimingZ80.split('/');
 
     generateLambda(r, opcode);
-    emitCode(`let o = this.memory.read8(this.r16[PC]++);`);
+
+    let call = instr.indexOf('CALL') >= 0;
+
+    if (call) {
+        emitCode(`let nn = this.memory.uread16(this.r16[PC]);`);
+        emitCode(`this.r16[PC] += 2;`);
+    } else {
+        emitCode(`let o = this.memory.read8(this.r16[PC]++);`);
+    }
+
+    let varName = call ? 'nn' : 'o'; 
 
     if (condition) { 
         emitCode(`if (${conditions[condition]}) {`);;
-        emitCode(`this.r16[PC] += o;`)
+        emitCode(`this.r16[PC] += ${varName};`)
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
+        emitCode(`}`);
     } else {
-        emitCode(`this.r16[PC] = val;`);
+        emitCode(`this.r16[PC] = ${varName};`);
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
     
@@ -288,7 +299,7 @@ function generateJPJR(row) {
     if (match.groups['opcode'] == "JP") {
         generateJPOpcode(row, condition, src, opcode);
     } else {
-        generateJROpcode(row, condition, src, opcode);
+        generateJRAndCallOpcode(row, condition, src, opcode);
     }
 }
 
@@ -299,7 +310,7 @@ fs.createReadStream('Opcodes.csv')
         // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
         //     generateLD(r);
         // });
-        results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+        results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
             generateJPJR(r);
         });
     });
