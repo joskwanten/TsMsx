@@ -307,9 +307,18 @@ fs.createReadStream('Opcodes.csv')
     .pipe(csv({ separator: ';' }))
     .on('data', (data) => results.push(data))
     .on('end', () => {
-        // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-        //     generateLD(r);
-        // });
+        results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+            generateLD(r);
+        });
+
+        results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+            generateJPJR(r);
+        });
+
+        results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+            generateJPJR(r);
+        });
+
         results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
             generateJPJR(r);
         });
