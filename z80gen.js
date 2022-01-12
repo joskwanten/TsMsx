@@ -35,8 +35,10 @@ let n_read = `
 let val = this.memory.uread8(this.r16[PC]++);    
 `;
 
+let stack_pc = `this.r16[SP] -= 2;\nthis.memory.uwrite16(this.r16[SP], this.r16[PC]);`
+
 const conditions = {
-    C: '(this.r8[F] & Flags.C)', 
+    C: '(this.r8[F] & Flags.C)',
     NC: '!(this.r8[F] & Flags.C)',
     Z: '(this.r8[F] & Flags.Z)',
     NZ: '!(this.r8[F] & Flags.Z)',
@@ -83,8 +85,8 @@ const registersLD = {
 };
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
-const pLookup =	{/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/};
-const qLookup =	{ 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A'};
+const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/ };
+const qLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A' };
 
 function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
@@ -151,7 +153,7 @@ function generateJPOpcode(r, condition, src, opcode) {
         .replace(/o/, '${o}')
         .replace(/nn/, '${val}');
 
-    if (condition) { 
+    if (condition) {
         emitCode(`if (${conditions[condition]}) {`);;
         emitCode(`this.r16[PC] = val;`)
         emitCode(`}`);
@@ -164,10 +166,10 @@ function generateJPOpcode(r, condition, src, opcode) {
 }
 
 function generateJRAndCallOpcode(r, condition, src, opcode) {
-    
+
     let instr = r.Instruction.replace(/r/, src)
-    .replace(/o/, '${o}')
-    .replace(/nn/, '${nn}');
+        .replace(/o/, '${o}')
+        .replace(/nn/, '${nn}');
 
     let timings = r.TimingZ80.split('/');
 
@@ -182,10 +184,11 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
         emitCode(`let o = this.memory.read8(this.r16[PC]++);`);
     }
 
-    let varName = call ? 'nn' : 'o'; 
+    let varName = call ? 'nn' : 'o';
 
-    if (condition) { 
+    if (condition) {
         emitCode(`if (${conditions[condition]}) {`);;
+        if (call) emitCode(stack_pc); // Call puts program counter on the stack
         emitCode(`this.r16[PC] += ${varName};`)
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
@@ -195,7 +198,7 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
         emitCode(`this.r16[PC] = ${varName};`);
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
-    
+
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
@@ -274,7 +277,7 @@ function generateLD(row) {
             let q = c[0];
             generateLDOpcode(row, dst, c[1], fillQInOpcode(opcode, q));
         });
-    }else {
+    } else {
         generateLDOpcode(row, dst, src, opcode);
     }
 }
@@ -295,7 +298,7 @@ function generateJPJR(row) {
     }
     let opcode = row.Opcode.trim().split(' ');
     //console.log(opcode);
-   
+
     if (match.groups['opcode'] == "JP") {
         generateJPOpcode(row, condition, src, opcode);
     } else {
@@ -303,32 +306,43 @@ function generateJPJR(row) {
     }
 }
 
-fs.createReadStream('Opcodes.csv')
-    .pipe(csv({ separator: ';' }))
-    .on('data', (data) => results.push(data))
-    .on('end', () => {
-        results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-            generateLD(r);
-        });
+async function generateCode() {
+    await new Promise((res, rej) => {
+        fs.createReadStream('Opcodes.csv')
+            .pipe(csv({ separator: ';' }))
+            .on('data', (data) => results.push(data))
+            .on('end', () => {
+                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
-        results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-            generateJPJR(r);
-        });
+                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-        results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-            generateJPJR(r);
-        });
+                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-        results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-            generateJPJR(r);
-        });
+                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
+
+                res();
+            });
     });
+}
 
-// fs.createReadStream('Opcodes.csv')
-//     .pipe(csv({ separator: ';' }))
-//     .on('data', (data) => results.push(data))
-//     .on('end', () => {
-//         results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-//             generateLD(r);
-//         })
-//     });  
+async function readFile() {
+    const data = fs.readFileSync('src/z80_template.ts', 'utf8');
+    let lines = data.split('\r\n');
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].indexOf('/* GENERATED_CODE_INSERT_HERE */') >= 0) {
+            await generateCode();
+        } else {
+            console.log(lines[i]);
+        }
+    }
+}
+
+readFile();
