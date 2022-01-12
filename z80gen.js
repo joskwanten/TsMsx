@@ -48,6 +48,35 @@ const conditions = {
     PO: '!(this.r8[F] & Flags.PV)',
 }
 
+const flagChecks = {
+    Z: 'if (val == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }',
+    PV: 'if (this.evenParity[val]) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }',
+    C: 'if ([val] & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }',
+    H: '// TODO: Implement Half carry behaviour'
+}
+
+const flagReset = {
+    S: 'this.r8[F] &= ~Flags.S;',
+    Z: 'this.r8[F] &= ~Flags.Z;',
+    F5: 'this.r8[F] &= ~Flags.F5;',
+    H: 'this.r8[F] &= ~Flags.H;',
+    F3:'this.r8[F] &= ~Flags.F3;',
+    PV: 'this.r8[F] &= ~Flags.PV;',
+    N: 'this.r8[F] &= ~Flags.N;',
+    C: 'this.r8[F] &= ~Flags.C;',
+}
+
+const flagSet = {
+    S: 'this.r8[F] |= Flags.S;',
+    Z: 'this.r8[F] |= Flags.Z;',
+    F5: 'this.r8[F] |= Flags.F5;',
+    H: 'this.r8[F] |= Flags.H;',
+    F3:'this.r8[F] |= Flags.F3;',
+    PV: 'this.r8[F] |= Flags.PV;',
+    N: 'this.r8[F] |= Flags.N;',
+    C: 'this.r8[F] |= Flags.C;',
+}
+
 const registersLD = {
     'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;' },
     'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;' },
@@ -214,10 +243,11 @@ function generateIncDecOpcode(r, src, opcode, inc) {
     emitCode(registersLD[src].src);
     if (inc) {
         emitCode('val++;');
-        /*
-        this.r8[F] &= !Flags.N;
-        if (val )
-        this.r8[F] 
+        emitCode(flagChecks.Z);
+
+        // this.r8[F] &= !Flags.N;
+        // if (val )
+        // this.r8[F] 
         // Preserves C flag, N flag is reset, P/V detects overflow and rest are modified by definition.
         // emitCode('let ')
         // emitCode(`this.r8[F] `
@@ -346,15 +376,15 @@ function generateIncDec(row) {
     if (src.match(/p/)) {
         Object.entries(pLookup).forEach(c => {
             let p = c[0];
-            generateIncDecOpcode(row, c[1], fillPInOpcode(opcode, p));
+            generateIncDecOpcode(row, c[1], fillPInOpcode(opcode, p), true);
         });
     } else if (src.match(/q/)) {
         Object.entries(pLookup).forEach(c => {
             let q = c[0];
-            generateIncDecOpcode(row, c[1], fillQInOpcode(opcode, q));
+            generateIncDecOpcode(row, c[1], fillQInOpcode(opcode, q), true);
         });
     } else {
-        generateIncDecOpcode(row, src, opcode);
+        generateIncDecOpcode(row, src, opcode, true);
     }
 }
 
