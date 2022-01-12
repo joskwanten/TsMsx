@@ -66,9 +66,6 @@ export class Z80 implements CPU {
     // Interrupts are enabled at startup
     interruptEnabled: boolean = true;
 
-    // Number of T-States executed
-    tStates: number = 0;
-
     // Interrupt flags 
     iff1 = true;
     iff2 = true;
@@ -81,8 +78,23 @@ export class Z80 implements CPU {
     opcodesDD: ((addr: number) => void)[] = [];
     opcodesFD: ((addr: number) => void)[] = [];
     opcodesCD: ((addr: number) => void)[] = [];
+    evenParity: boolean[] = [];
+
+    generateEvenParityTable() {
+        this.evenParity = [...Array(256).keys()]
+            .map(x => {
+                let sum = 0;
+                for (let i = 0; i < 8; i++) {
+                    sum += ((x >> i) & 1);
+                };
+                return !(sum & 1);
+            });
+    }
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
+        // Generate parity table for fast computation of parity
+        this.generateEvenParityTable();
+        
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
             this.opcodesED[opcode](addr);
@@ -100,7 +112,7 @@ export class Z80 implements CPU {
             this.opcodesCD[opcode](addr);
         }
 
-        this.addOpcodes();  
+        this.addOpcodes();
     }
     halt(): void {
         throw new Error('Method not implemented.');
@@ -149,7 +161,7 @@ export class Z80 implements CPU {
 
     }
 
-    
+
     addInstructionED(opcode: number, func: (addr: number) => void) {
         this.opcodesED[opcode] = func;
     }
@@ -165,7 +177,7 @@ export class Z80 implements CPU {
     addInstruction(opcode: number, func: (addr: number) => void) {
         this.opcodes[opcode] = func;
     }
-  
+
     addOpcodes() {
         /* GENERATED_CODE_INSERT_HERE */
     }
