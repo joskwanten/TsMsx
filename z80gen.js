@@ -52,7 +52,9 @@ const flagChecks = {
     Z: 'if (val == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }',
     PV: 'if (this.evenParity[val]) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }',
     C: 'if ([val] & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }',
-    H: '// TODO: Implement Half carry behaviour'
+    H: '// TODO: Implement Half carry behaviour',
+    S: 'if (val == 0x80) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }',
+    S16: 'if (val == 0x8000) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }',
 }
 
 const flagReset = {
@@ -60,7 +62,7 @@ const flagReset = {
     Z: 'this.r8[F] &= ~Flags.Z;',
     F5: 'this.r8[F] &= ~Flags.F5;',
     H: 'this.r8[F] &= ~Flags.H;',
-    F3:'this.r8[F] &= ~Flags.F3;',
+    F3: 'this.r8[F] &= ~Flags.F3;',
     PV: 'this.r8[F] &= ~Flags.PV;',
     N: 'this.r8[F] &= ~Flags.N;',
     C: 'this.r8[F] &= ~Flags.C;',
@@ -71,41 +73,41 @@ const flagSet = {
     Z: 'this.r8[F] |= Flags.Z;',
     F5: 'this.r8[F] |= Flags.F5;',
     H: 'this.r8[F] |= Flags.H;',
-    F3:'this.r8[F] |= Flags.F3;',
+    F3: 'this.r8[F] |= Flags.F3;',
     PV: 'this.r8[F] |= Flags.PV;',
     N: 'this.r8[F] |= Flags.N;',
     C: 'this.r8[F] |= Flags.C;',
 }
 
 const registersLD = {
-    'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;' },
-    'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;' },
-    'B': { type: 8, src: 'let val = this.r8[B];', dst: 'this.r8[B] = val;' },
-    'C': { type: 8, src: 'let val = this.r8[C];', dst: 'this.r8[C] = val;' },
+    'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;', direct: 'this.r8[A]' },
+    'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;', direct: 'this.r8[F]' },
+    'B': { type: 8, src: 'let val = this.r8[B];', dst: 'this.r8[B] = val;', direct: 'this.r8[B]' },
+    'C': { type: 8, src: 'let val = this.r8[C];', dst: 'this.r8[C] = val;', direct: 'this.r8[C]' },
     '(C)': { type: 8, src: 'let val = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], src);' },
-    'D': { type: 8, src: 'let val = this.r8[D];', dst: 'this.r8[D] = val;' },
-    'E': { type: 8, src: 'let val = this.r8[E];', dst: 'this.r8[E] = val;' },
-    'H': { type: 8, src: 'let val = this.r8[H];', dst: 'this.r8[H] = val;' },
-    'L': { type: 8, src: 'let val = this.r8[L];', dst: 'this.r8[L] = val;' },
-    'I': { type: 8, src: 'let val = this.r8[I];', dst: 'this.r8[I] = val;' },
-    'R': { type: 8, src: 'let val = this.r8[R];', dst: 'this.r8[R] = val;' },
-    'AF': { type: 16, src: 'let val = this.r16[AF];', dst: 'this.r16[AF] = val;' },
-    'BC': { type: 16, src: 'let val = this.r16[BC];', dst: 'this.r16[BC] = val;' },
-    'DE': { type: 16, src: 'let val = this.r16[DE];', dst: 'this.r16[DE] = val;' },
-    'HL': { type: 16, src: 'let val = this.r16[HL];', dst: 'this.r16[HL] = val;' },
-    'SP': { type: 16, src: 'let val = this.r16[SP];', dst: 'this.r16[SP] = val;' },
+    'D': { type: 8, src: 'let val = this.r8[D];', dst: 'this.r8[D] = val;', direct: 'this.r8[D]' },
+    'E': { type: 8, src: 'let val = this.r8[E];', dst: 'this.r8[E] = val;', direct: 'this.r8[E]' },
+    'H': { type: 8, src: 'let val = this.r8[H];', dst: 'this.r8[H] = val;', direct: 'this.r8[H]' },
+    'L': { type: 8, src: 'let val = this.r8[L];', dst: 'this.r8[L] = val;', direct: 'this.r8[L]' },
+    'I': { type: 8, src: 'let val = this.r8[I];', dst: 'this.r8[I] = val;', direct: 'this.r8[I]' },
+    'R': { type: 8, src: 'let val = this.r8[R];', dst: 'this.r8[R] = val;', direct: 'this.r8[R]' },
+    'AF': { type: 16, src: 'let val = this.r16[AF];', dst: 'this.r16[AF] = val;', direct: 'this.r8[AF]' },
+    'BC': { type: 16, src: 'let val = this.r16[BC];', dst: 'this.r16[BC] = val;', direct: 'this.r8[BC]' },
+    'DE': { type: 16, src: 'let val = this.r16[DE];', dst: 'this.r16[DE] = val;', direct: 'this.r8[DE]' },
+    'HL': { type: 16, src: 'let val = this.r16[HL];', dst: 'this.r16[HL] = val;', direct: 'this.r8[HL]' },
+    'SP': { type: 16, src: 'let val = this.r16[SP];', dst: 'this.r16[SP] = val;', direct: 'this.r8[SP]' },
     '(BC)': { type: 8, src: 'let val = this.memory.uread8(this.r16[BC]);', dst: 'this.memory.uwrite8(this.r16[BC], val);' },
     '(DE)': { type: 8, src: 'let val = this.memory.uread8(this.r16[DE]);', dst: 'this.memory.uwrite8(this.r16[DE], val);' },
     '(HL)': { type: 8, src: 'let val = this.memory.uread8(this.r16[HL]);', dst: 'this.memory.uwrite8(this.r16[HL], val);' },
     '(IX)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IX]);', dst: 'this.memory.uwrite8(this.r16[IX], val);' },
     '(IY)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY]);', dst: 'this.memory.uwrite8(this.r16[IY], val);' },
-    'HL\'': { type: 16, src: 'let val = this.r16s[HL];', dst: 'this.r16s[HL] = val;' },
-    'IXh': { type: 8, src: 'let val = this.r8[IXh];', dst: 'this.r8[IXh] = val;' },
-    'IXl': { type: 8, src: 'let val = this.r8[IXl];', dst: 'this.r8[IXl] = val;' },
-    'IYh': { type: 8, src: 'let val = this.r8[IYh];', dst: 'this.r8[IYh] = val;' },
-    'IYl': { type: 8, src: 'let val = this.r8[IYl];', dst: 'this.r8[IYl] = val;' },
-    'IX': { type: 16, src: 'let val = this.r16[IX];', dst: 'this.r16[IX] = val;' },
-    'IY': { type: 16, src: 'let val = this.r16[IY];', dst: 'this.r16[IY] = val;' },
+    'HL\'': { type: 16, src: 'let val = this.r16s[HL];', dst: 'this.r16s[HL] = val;', direct: 'this.r16s[HL]' },
+    'IXh': { type: 8, src: 'let val = this.r8[IXh];', dst: 'this.r8[IXh] = val;', direct: 'this.r8[IXh]' },
+    'IXl': { type: 8, src: 'let val = this.r8[IXl];', dst: 'this.r8[IXl] = val;', direct: 'this.r8[IXl]' },
+    'IYh': { type: 8, src: 'let val = this.r8[IYh];', dst: 'this.r8[IYh] = val;', direct: 'this.r8[IYh]' },
+    'IYl': { type: 8, src: 'let val = this.r8[IYl];', dst: 'this.r8[IYl] = val;', direct: 'this.r8[IYl]' },
+    'IX': { type: 16, src: 'let val = this.r16[IX];', dst: 'this.r16[IX] = val;', direct: 'this.r16[IX]' },
+    'IY': { type: 16, src: 'let val = this.r16[IY];', dst: 'this.r16[IY] = val;', direct: 'this.r16[IY]' },
     '(IX+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, val);' },
     '(IY+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
@@ -155,11 +157,15 @@ function generateLambda(r, opcode) {
 function generateLDOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
 
-    emitCode(registersLD[src].src);
-    if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
-        emitCode(registersLD[dst].dst16);
+    if (registersLD[src].direct && registersLD[dst].direct) {
+        emitCode(`${registersLD[dst].direct} = ${registersLD[src].direct}`);
     } else {
-        emitCode(registersLD[dst].dst);
+        emitCode(registersLD[src].src);
+        if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
+            emitCode(registersLD[dst].dst16);
+        } else {
+            emitCode(registersLD[dst].dst);
+        }
     }
 
     let instr = r.Instruction.replace(/r/, src)
@@ -232,7 +238,6 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
     emitCode(`});\n`);
 }
 
-
 function generateIncDecOpcode(r, src, opcode, inc) {
 
     let instr = r.Instruction.replace(/r/, src)
@@ -240,24 +245,20 @@ function generateIncDecOpcode(r, src, opcode, inc) {
         .replace(/nn/, '${nn}');
 
     generateLambda(r, opcode);
-    emitCode(registersLD[src].src);
-    if (inc) {
-        emitCode('val++;');
-        emitCode(flagReset.N);
-        emitCode(flagChecks.Z);
-        emitCode
 
-
-        // this.r8[F] &= !Flags.N;
-        // if (val )
-        // this.r8[F] 
-        // Preserves C flag, N flag is reset, P/V detects overflow and rest are modified by definition.
-        // emitCode('let ')
-        // emitCode(`this.r8[F] `
+    let val = 'val';
+    if (registersLD[src].direct) {
+        val = registersLD[src].direct;
+        emitCode(`${val}++`);
     } else {
-        emitCode('val--;');
+        emitCode(registersLD[src].src);    
+        emitCode(`${val}++`);
+        emitCode(registersLD[src].dst)
     }
-    emitCode(registersLD[src].dst)
+
+    emitCode(flagReset.N);
+    emitCode(flagChecks.Z.replace(/val/, val));         
+    
 
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
@@ -397,9 +398,9 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
                 // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
                 //     generateJPJR(r);
@@ -413,9 +414,9 @@ async function generateCode() {
                 //     generateJPJR(r);
                 // });
 
-                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                //     generateIncDec(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                    generateIncDec(r);
+                });
 
                 res();
             });
