@@ -243,7 +243,10 @@ function generateIncDecOpcode(r, src, opcode, inc) {
     emitCode(registersLD[src].src);
     if (inc) {
         emitCode('val++;');
+        emitCode(flagReset.N);
         emitCode(flagChecks.Z);
+        emitCode
+
 
         // this.r8[F] &= !Flags.N;
         // if (val )
@@ -394,9 +397,9 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
                 // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
                 //     generateJPJR(r);
@@ -410,9 +413,9 @@ async function generateCode() {
                 //     generateJPJR(r);
                 // });
 
-                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                    generateIncDec(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                //     generateIncDec(r);
+                // });
 
                 res();
             });
