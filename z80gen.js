@@ -204,6 +204,29 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
 }
 
 
+function generateIncDecOpcode(r, src, opcode, inc) {
+
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/nn/, '${nn}');
+
+    generateLambda(r, opcode);
+    emitCode(registersLD[src].src);
+    if (inc) {
+        emitCode('val++;');
+        // Preserves C flag, N flag is reset, P/V detects overflow and rest are modified by definition.
+        // emitCode('let ')
+        // emitCode(`this.r8[F] `
+    } else {
+        emitCode('val--;');
+    }
+    emitCode(registersLD[src].dst)
+
+    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+
 function fillRInOpcode(opcode, r) {
     let regex = /(?<base>\w+)\+r/
     return opcode.map(o => {
@@ -306,26 +329,55 @@ function generateJPJR(row) {
     }
 }
 
+function generateIncDec(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+    let src = match.groups["operand"];
+    if (src.match(/p/)) {
+        Object.entries(pLookup).forEach(c => {
+            let p = c[0];
+            generateIncDecOpcode(row, c[1], fillPInOpcode(opcode, p));
+        });
+    } else if (src.match(/q/)) {
+        Object.entries(pLookup).forEach(c => {
+            let q = c[0];
+            generateIncDecOpcode(row, c[1], fillQInOpcode(opcode, q));
+        });
+    } else {
+        generateIncDecOpcode(row, src, opcode);
+    }
+}
+
 async function generateCode() {
     await new Promise((res, rej) => {
         fs.createReadStream('Opcodes.csv')
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                    generateJPJR(r);
+                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                    generateIncDec(r);
                 });
 
                 res();
