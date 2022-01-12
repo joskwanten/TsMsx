@@ -214,6 +214,10 @@ function generateIncDecOpcode(r, src, opcode, inc) {
     emitCode(registersLD[src].src);
     if (inc) {
         emitCode('val++;');
+        /*
+        this.r8[F] &= !Flags.N;
+        if (val )
+        this.r8[F] 
         // Preserves C flag, N flag is reset, P/V detects overflow and rest are modified by definition.
         // emitCode('let ')
         // emitCode(`this.r8[F] `
