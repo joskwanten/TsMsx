@@ -118,25 +118,28 @@ export class Z80 implements CPU {
         return result;
     }
 
-    inc8(value: number): number {
-        let result = value + 1;
+    incDec8(value: number, inc: boolean): number {
+        // Add 1 or in case of decrement the two's complement of one
+        let result = value + (inc ? 0x01 : 0xff);
 
-        // Reset N flag
-        this.r8[F] &= ~Flags.N;
+        // Reset N flag if it is an increment
+        if(!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
 
         // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
-        if (result & 0x80) { this.r8[F] |= Flags.S } else { this.r8[F] &= ~Flags.S }
+        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
 
         // Carry is unaffected
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = ((value & 0x80) == 0) && ((result & 0x80) != 0);
+        let overflow = inc ? 
+            ((value & 0x80) == 0) && ((result & 0x80) != 0) :
+            ((value & 0x80) == 0x80) && ((result & 0x80) != 0x80);
 
         // Set carry if bit 9 is set
-        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+        if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
     }

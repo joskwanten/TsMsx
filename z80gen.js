@@ -108,8 +108,8 @@ const registersLD = {
     'IYl': { type: 8, src: 'let val = this.r8[IYl];', dst: 'this.r8[IYl] = val;', direct: 'this.r8[IYl]' },
     'IX': { type: 16, src: 'let val = this.r16[IX];', dst: 'this.r16[IX] = val;', direct: 'this.r16[IX]' },
     'IY': { type: 16, src: 'let val = this.r16[IY];', dst: 'this.r16[IY] = val;', direct: 'this.r16[IY]' },
-    '(IX+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, val);' },
-    '(IY+o)': { type: 24, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
+    '(IX+o)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IX] + o);', dst: 'this.memory.uwrite8(this.r16[IX] + o, val);' },
+    '(IY+o)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
     '(nn)': { type: 8, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
@@ -247,18 +247,17 @@ function generateIncDecOpcode(r, src, opcode, inc) {
     generateLambda(r, opcode);
 
     let val = 'val';
-    if (registersLD[src].direct) {
-        val = registersLD[src].direct;
-        emitCode(`${val}++`);
+    if (registersLD[src].direct && registersLD[src].type == 8) {
+        emitCode(`${registersLD[src].direct} = this.incDec8(${registersLD[src].direct}, true);`);
     } else {
-        emitCode(registersLD[src].src);    
-        emitCode(`${val}++`);
+        emitCode(registersLD[src].src);
+        if (registersLD[src].type == 8) {
+            emitCode(`${val} = this.incDec8(${val}, true);`);
+        } else {
+            emitCode(`${val}++`);
+        }
         emitCode(registersLD[src].dst)
     }
-
-    emitCode(flagReset.N);
-    emitCode(flagChecks.Z.replace(/val/, val));         
-    
 
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
@@ -287,6 +286,17 @@ function fillPInOpcode(opcode, p) {
     })
 }
 
+function fillPInOpcodeMul(opcode, p) {
+    let regex = /(?<base>\w+)\*p/
+    return opcode.map(o => {
+        let match = regex.exec(o);
+        if (match) {
+            return `${(parseInt(match.groups['base'], 16) * parseInt(p)).toString(16)}`;
+        }
+        return `${o}`;
+    })
+}
+
 function fillQInOpcode(opcode, p) {
     let regex = /(?<base>\w+)\+q/
     return opcode.map(o => {
@@ -304,6 +314,17 @@ function fillQInOpcode(opcode, q) {
         let match = regex.exec(o);
         if (match) {
             return `${(parseInt(match.groups['base'], 16) + parseInt(q)).toString(16)}`;
+        }
+        return `${o}`;
+    })
+}
+
+function fillQInOpcodeMul(opcode, q) {
+    let regex = /(?<base>\w+)\*q/
+    return opcode.map(o => {
+        let match = regex.exec(o);
+        if (match) {
+            return `${(parseInt(match.groups['base'], 16) * parseInt(q)).toString(16)}`;
         }
         return `${o}`;
     })
@@ -380,12 +401,12 @@ function generateIncDec(row) {
     if (src.match(/p/)) {
         Object.entries(pLookup).forEach(c => {
             let p = c[0];
-            generateIncDecOpcode(row, c[1], fillPInOpcode(opcode, p), true);
+            generateIncDecOpcode(row, c[1], fillPInOpcodeMul(opcode, p), true);
         });
     } else if (src.match(/q/)) {
         Object.entries(pLookup).forEach(c => {
             let q = c[0];
-            generateIncDecOpcode(row, c[1], fillQInOpcode(opcode, q), true);
+            generateIncDecOpcode(row, c[1], fillQInOpcodeMul(opcode, q), true);
         });
     } else {
         generateIncDecOpcode(row, src, opcode, true);
