@@ -80,16 +80,28 @@ export class Z80 implements CPU {
     opcodesCD: ((addr: number) => void)[] = [];
     evenParity: boolean[] = [];
 
-    add8(value1: number, value2: number): number {
+    addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
+        // If carry has to be taken into account add one to the second operand
+        if(carry && (this.r8[F] & Flags.C)) {
+            value2 += 1;
+        }
+        
+        if (sub) {
+            // Substraction is the same as an addition except that it
+            // uses the 2's-complement value for the computation
+            value2 = (~(value2 - 1)) & 0xff
+        }
+
         let result = value1 + value2;
 
-        // Reset N flag
-        this.r8[F] &= ~Flags.N;
+        // Set / Reset N flag depending if it is an addition or substraction
+        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N}
 
         // Set Zero flag if result is zero
         if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
-        // Set sign if the result has its sign bit set (2-complement)
+        // Set sign / F3 / F5 if the result has its sign bit set (2-complement)
+        // TODO: Check smart method
         if (result & 0x80) { this.r8[F] |= Flags.S } else { this.r8[F] &= ~Flags.S }
 
         // Set carry if bit 9 is set
