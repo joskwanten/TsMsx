@@ -80,6 +80,54 @@ export class Z80 implements CPU {
     opcodesCD: ((addr: number) => void)[] = [];
     evenParity: boolean[] = [];
 
+    add8(value1: number, value2: number): number {
+        let result = value1 + value2;
+
+        // Reset N flag
+        this.r8[F] &= ~Flags.N;
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S } else { this.r8[F] &= ~Flags.S }
+
+        // Set carry if bit 9 is set
+        if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Overflow, if signs of both values are the same and the sign result is different, then we have
+        // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
+        let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) != (value1 & 0x80));
+
+        // Set carry if bit 9 is set
+        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+
+        return result;
+    }
+
+    inc8(value: number): number {
+        let result = value + 1;
+
+        // Reset N flag
+        this.r8[F] &= ~Flags.N;
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S } else { this.r8[F] &= ~Flags.S }
+
+        // Carry is unaffected
+
+        // Overflow, if the sign flips after adding 1
+        let overflow = ((value & 0x80) == 0) && ((result & 0x80) != 0);
+
+        // Set carry if bit 9 is set
+        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+
+        return result;
+    }
+
     generateEvenParityTable() {
         this.evenParity = [...Array(256).keys()]
             .map(x => {
@@ -94,7 +142,7 @@ export class Z80 implements CPU {
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
         // Generate parity table for fast computation of parity
         this.generateEvenParityTable();
-        
+
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
             this.opcodesED[opcode](addr);
