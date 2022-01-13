@@ -42,6 +42,7 @@ enum Flags {
     PV = 0b00000100,
     N = 0b00000010,
     C = 0b00000001,
+    S_F5_F3 = 0b10010100,
 }
 
 export class Z80 implements CPU {
@@ -82,10 +83,10 @@ export class Z80 implements CPU {
 
     addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
         // If carry has to be taken into account add one to the second operand
-        if(carry && (this.r8[F] & Flags.C)) {
+        if (carry && (this.r8[F] & Flags.C)) {
             value2 += 1;
         }
-        
+
         if (sub) {
             // Substraction is the same as an addition except that it
             // uses the 2's-complement value for the computation
@@ -95,14 +96,14 @@ export class Z80 implements CPU {
         let result = value1 + value2;
 
         // Set / Reset N flag depending if it is an addition or substraction
-        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N}
+        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
 
         // Set Zero flag if result is zero
         if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
-        // Set sign / F3 / F5 if the result has its sign bit set (2-complement)
-        // TODO: Check smart method
-        if (result & 0x80) { this.r8[F] |= Flags.S } else { this.r8[F] &= ~Flags.S }
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
 
         // Set carry if bit 9 is set
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
@@ -131,7 +132,7 @@ export class Z80 implements CPU {
 
         // Carry is unaffected
 
-        // Overflow, if the sign flips after adding 1
+        // Overflow, if the sign becomes negative when adding one
         let overflow = ((value & 0x80) == 0) && ((result & 0x80) != 0);
 
         // Set carry if bit 9 is set
