@@ -42,7 +42,13 @@ enum Flags {
     PV = 0b00000100,
     N = 0b00000010,
     C = 0b00000001,
-    S_F5_F3 = 0b10010100,
+    S_F5_F3 = 0b10101000,
+}
+
+enum LogicalOperation {
+    AND,
+    OR,
+    XOR,
 }
 
 export class Z80 implements CPU {
@@ -123,7 +129,7 @@ export class Z80 implements CPU {
         let result = value + (inc ? 0x01 : 0xff);
 
         // Reset N flag if it is an increment
-        if (!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
+        if(!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
 
         // Set Zero flag if result is zero
         if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
@@ -134,7 +140,7 @@ export class Z80 implements CPU {
         // Carry is unaffected
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ?
+        let overflow = inc ? 
             ((value & 0x80) == 0) && ((result & 0x80) != 0) :
             ((value & 0x80) == 0x80) && ((result & 0x80) != 0x80);
 
@@ -142,6 +148,25 @@ export class Z80 implements CPU {
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
+    }
+
+    logicalOperation(value: number, operation: LogicalOperation) {
+        // Add 1 or in case of decrement the two's complement of one
+        let result = (operation == LogicalOperation.AND) ? this.r8[A] & value 
+            : (operation == LogicalOperation.OR) ? this.r8[A] | value
+            : this.r8[A] ^ value;
+
+        // Reset N and C flags
+        this.r8[F] &= ~Flags.N;
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+
+        // Set parity if even
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
     generateEvenParityTable() {
@@ -243,145 +268,69 @@ export class Z80 implements CPU {
     }
 
     addOpcodes() {
-        this.addInstruction(0x34, (addr: number) => {
-            // INC (HL) Opcode: 34
-            let val = this.memory.uread8(this.r16[HL]);
-            val = this.incDec8(val, true);
-            this.memory.uwrite8(this.r16[HL], val);
-            this.log(addr, `INC (HL)`)
-        });
+this.addInstructionED(0x79, (addr: number) => {
+// OUT (C),A Opcode: ED 79
+let val = this.r8[A];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),A`)
+});
 
-        this.addInstructionDD(0x34, (addr: number) => {
-            // INC (IX+o) Opcode: DD 34 o
-            let o = this.memory.uread8(this.r16[PC]++);
-            let val = this.memory.uread8(this.r16[IX] + o);
-            val = this.incDec8(val, true);
-            this.memory.uwrite8(this.r16[IX] + o, val);
-            this.log(addr, `INC (IX+${o})`)
-        });
+this.addInstructionED(0x41, (addr: number) => {
+// OUT (C),B Opcode: ED 41
+let val = this.r8[B];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),B`)
+});
 
-        this.addInstructionFD(0x34, (addr: number) => {
-            // INC (IY+o) Opcode: FD 34 o
-            let o = this.memory.uread8(this.r16[PC]++);
-            let val = this.memory.uread8(this.r16[IY] + o)
-            val = this.incDec8(val, true);
-            this.memory.uwrite8(this.r16[IY] + o, val);
-            this.log(addr, `INC (IY+${o})`)
-        });
+this.addInstructionED(0x49, (addr: number) => {
+// OUT (C),C Opcode: ED 49
+let val = this.r8[C];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),C`)
+});
 
-        this.addInstruction(0x3C, (addr: number) => {
-            // INC A Opcode: 3C
-            this.r8[A] = this.incDec8(this.r8[A], true);
-            this.log(addr, `INC A`)
-        });
+this.addInstructionED(0x51, (addr: number) => {
+// OUT (C),D Opcode: ED 51
+let val = this.r8[D];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),D`)
+});
 
-        this.addInstruction(0x4, (addr: number) => {
-            // INC B Opcode: 4
-            this.r8[B] = this.incDec8(this.r8[B], true);
-            this.log(addr, `INC B`)
-        });
+this.addInstructionED(0x59, (addr: number) => {
+// OUT (C),E Opcode: ED 59
+let val = this.r8[E];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),E`)
+});
 
-        this.addInstruction(0x3, (addr: number) => {
-            // INC BC Opcode: 3
-            let val = this.r16[BC];
-            val++
-            this.r16[BC] = val;
-            this.log(addr, `INC BC`)
-        });
+this.addInstructionED(0x61, (addr: number) => {
+// OUT (C),H Opcode: ED 61
+let val = this.r8[H];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),H`)
+});
 
-        this.addInstruction(0x0C, (addr: number) => {
-            // INC C Opcode: 0C
-            this.r8[C] = this.incDec8(this.r8[C], true);
-            this.log(addr, `INC C`)
-        });
+this.addInstructionED(0x69, (addr: number) => {
+// OUT (C),L Opcode: ED 69
+let val = this.r8[L];
+this.IO.write8(this.r8[C], val);
+this.cycles += 12;
+this.log(addr, `OUT (C),L`)
+});
 
-        this.addInstruction(0x14, (addr: number) => {
-            // INC D Opcode: 14
-            this.r8[D] = this.incDec8(this.r8[D], true);
-            this.log(addr, `INC D`)
-        });
-
-        this.addInstruction(0x13, (addr: number) => {
-            // INC DE Opcode: 13
-            let val = this.r16[DE];
-            val++
-            this.r16[DE] = val;
-            this.log(addr, `INC DE`)
-        });
-
-        this.addInstruction(0x1C, (addr: number) => {
-            // INC E Opcode: 1C
-            this.r8[E] = this.incDec8(this.r8[E], true);
-            this.log(addr, `INC E`)
-        });
-
-        this.addInstruction(0x24, (addr: number) => {
-            // INC H Opcode: 24
-            this.r8[H] = this.incDec8(this.r8[H], true);
-            this.log(addr, `INC H`)
-        });
-
-        this.addInstruction(0x23, (addr: number) => {
-            // INC HL Opcode: 23
-            let val = this.r16[HL];
-            val++
-            this.r16[HL] = val;
-            this.log(addr, `INC HL`)
-        });
-
-        this.addInstructionDD(0x23, (addr: number) => {
-            // INC IX Opcode: DD 23
-            let val = this.r16[IX];
-            val++
-            this.r16[IX] = val;
-            this.log(addr, `INC IX`)
-        });
-
-        this.addInstructionFD(0x23, (addr: number) => {
-            // INC IY Opcode: FD 23
-            let val = this.r16[IY];
-            val++
-            this.r16[IY] = val;
-            this.log(addr, `INC IY`)
-        });
-
-        this.addInstructionDD(0x20, (addr: number) => {
-            // INC IXp Opcode: DD 04+8*p
-            this.r8[IXh] = this.incDec8(this.r8[IXh], true);
-            this.log(addr, `INC IXp`)
-        });
-
-        this.addInstructionDD(0x28, (addr: number) => {
-            // INC IXp Opcode: DD 04+8*p
-            this.r8[IXl] = this.incDec8(this.r8[IXl], true);
-            this.log(addr, `INC IXp`)
-        });
-
-        this.addInstructionFD(0x20, (addr: number) => {
-            // INC IYq Opcode: FD 04+8*q
-            this.r8[IXh] = this.incDec8(this.r8[IXh], true);
-            this.log(addr, `INC IYq`)
-        });
-
-        this.addInstructionFD(0x28, (addr: number) => {
-            // INC IYq Opcode: FD 04+8*q
-            this.r8[IXl] = this.incDec8(this.r8[IXl], true);
-            this.log(addr, `INC IYq`)
-        });
-
-        this.addInstruction(0x2C, (addr: number) => {
-            // INC L Opcode: 2C
-            this.r8[L] = this.incDec8(this.r8[L], true);
-            this.log(addr, `INC L`)
-        });
-
-        this.addInstruction(0x33, (addr: number) => {
-            // INC SP Opcode: 33
-            let val = this.r16[SP];
-            val++
-            this.r16[SP] = val;
-            this.log(addr, `INC SP`)
-        });
+this.addInstruction(0xD3, (addr: number) => {
+// OUT (n),A Opcode: D3 n
+let val = this.r8[A];
+this.IO.write8(n, val);
+this.cycles += 11;
+this.log(addr, `OUT (n),A`)
+});
 
     }
 }

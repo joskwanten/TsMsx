@@ -84,7 +84,7 @@ const registersLD = {
     'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;', direct: 'this.r8[F]' },
     'B': { type: 8, src: 'let val = this.r8[B];', dst: 'this.r8[B] = val;', direct: 'this.r8[B]' },
     'C': { type: 8, src: 'let val = this.r8[C];', dst: 'this.r8[C] = val;', direct: 'this.r8[C]' },
-    '(C)': { type: 8, src: 'let val = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], src);' },
+    '(C)': { type: 8, src: 'let val = this.IO.read8(this.r8[C]);', dst: 'this.IO.write8(this.r8[C], val);' },
     'D': { type: 8, src: 'let val = this.r8[D];', dst: 'this.r8[D] = val;', direct: 'this.r8[D]' },
     'E': { type: 8, src: 'let val = this.r8[E];', dst: 'this.r8[E] = val;', direct: 'this.r8[E]' },
     'H': { type: 8, src: 'let val = this.r8[H];', dst: 'this.r8[H] = val;', direct: 'this.r8[H]' },
@@ -112,6 +112,7 @@ const registersLD = {
     '(IY+o)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
+    '(n)': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: 'this.IO.write8(n, val);' },
     '(nn)': { type: 8, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
 
@@ -470,41 +471,50 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                //     generateIncDec(r, true);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
+                //     generateIncDec(r, false);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'AND');
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'OR');
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'XOR');
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
                     generateLD(r);
                 });
 
-                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                    generateIncDec(r, true);
-                });
-
-                results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
-                    generateIncDec(r, false);
-                });
-
-                results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'AND');
-                });
-
-                results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'OR');
-                });
-
-                results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'XOR');
-                });
 
                 res();
             });
