@@ -42,7 +42,13 @@ enum Flags {
     PV = 0b00000100,
     N = 0b00000010,
     C = 0b00000001,
-    S_F5_F3 = 0b10010100,
+    S_F5_F3 = 0b10101000,
+}
+
+enum LogicalOperation {
+    AND,
+    OR,
+    XOR,
 }
 
 export class Z80 implements CPU {
@@ -142,6 +148,25 @@ export class Z80 implements CPU {
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
+    }
+
+    logicalOperation(value: number, operation: LogicalOperation) {
+        // Add 1 or in case of decrement the two's complement of one
+        let result = (operation == LogicalOperation.AND) ? this.r8[A] & value 
+            : (operation == LogicalOperation.OR) ? this.r8[A] | value
+            : this.r8[A] ^ value;
+
+        // Reset N and C flags
+        this.r8[F] &= ~Flags.N;
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+
+        // Set parity if even
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
     generateEvenParityTable() {

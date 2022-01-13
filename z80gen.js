@@ -248,16 +248,37 @@ function generateIncDecOpcode(r, src, opcode, inc) {
 
     let val = 'val';
     if (registersLD[src].direct && registersLD[src].type == 8) {
-        emitCode(`${registersLD[src].direct} = this.incDec8(${registersLD[src].direct}, true);`);
+        emitCode(`${registersLD[src].direct} = this.incDec8(${registersLD[src].direct}, ${inc});`);
     } else {
         emitCode(registersLD[src].src);
         if (registersLD[src].type == 8) {
-            emitCode(`${val} = this.incDec8(${val}, true);`);
+            emitCode(`${val} = this.incDec8(${val}, ${inc});`);
         } else {
-            emitCode(`${val}++`);
+            if (inc) {
+                emitCode(`${val}++`);
+            } else {
+                emitCode(`${val}--`);
+            }
         }
         emitCode(registersLD[src].dst)
     }
+
+    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+function generateAndOrXorOpcode(r, src, opcode, operation) {
+
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/nn/, '${nn}');
+
+    generateLambda(r, opcode);
+
+    let val = 'val';
+    emitCode(registersLD[src].src);
+
+    emitCode(`this.logicalOperation(${val}, LogicalOperation.${operation});`);
 
     emitCode(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
@@ -388,7 +409,7 @@ function generateJPJR(row) {
     }
 }
 
-function generateIncDec(row) {
+function generateIncDec(row, inc) {
     //console.log(r);
     let match = mnemonic.exec(row.Instruction);
     if (!match) {
@@ -401,15 +422,45 @@ function generateIncDec(row) {
     if (src.match(/p/)) {
         Object.entries(pLookup).forEach(c => {
             let p = c[0];
-            generateIncDecOpcode(row, c[1], fillPInOpcodeMul(opcode, p), true);
+            generateIncDecOpcode(row, c[1], fillPInOpcodeMul(opcode, p), inc);
         });
     } else if (src.match(/q/)) {
         Object.entries(pLookup).forEach(c => {
             let q = c[0];
-            generateIncDecOpcode(row, c[1], fillQInOpcodeMul(opcode, q), true);
+            generateIncDecOpcode(row, c[1], fillQInOpcodeMul(opcode, q), inc);
         });
     } else {
-        generateIncDecOpcode(row, src, opcode, true);
+        generateIncDecOpcode(row, src, opcode, inc);
+    }
+}
+
+function generateAndOrXor(row, operation) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+    let src = match.groups["operand"];
+    if (src.match(/r/)) {
+        Object.entries(rLookup).forEach(c => {
+            let r = c[0];
+            generateAndOrXorOpcode(row, c[1], fillRInOpcode(opcode, r), operation);
+        });
+    } else if (src.match(/p/)) {
+        Object.entries(pLookup).forEach(c => {
+            let p = c[0];
+            generateAndOrXorOpcode(row, c[1], fillPInOpcode(opcode, p), operation);
+        });
+    } else if (src.match(/q/)) {
+        Object.entries(pLookup).forEach(c => {
+            let q = c[0];
+            generateAndOrXorOpcode(row, c[1], fillQInOpcode(opcode, q), operation);
+        });
+    } else {
+        generateAndOrXorOpcode(row, src, opcode, operation);
     }
 }
 
@@ -419,24 +470,40 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
                 results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                    generateIncDec(r);
+                    generateIncDec(r, true);
+                });
+
+                results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
+                    generateIncDec(r, false);
+                });
+
+                results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'AND');
+                });
+
+                results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'OR');
+                });
+
+                results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'XOR');
                 });
 
                 res();
