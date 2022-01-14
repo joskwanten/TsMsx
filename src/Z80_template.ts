@@ -196,6 +196,7 @@ export class Z80 implements CPU {
 
         // Reset N and C flags
         this.r8[F] &= ~Flags.N;
+        this.r8[F] &= ~Flags.C;
 
         // Set Zero flag if result is zero
         if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
@@ -205,6 +206,70 @@ export class Z80 implements CPU {
 
         // Set parity if even
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+    }
+
+    shiftRotateFlags(result: number) { 
+        // Reset H and N flags
+        this.r8[F] &= ~Flags.H;
+        this.r8[F] &= ~Flags.N;
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+
+        // Set parity if even
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+    }
+
+
+    rotateLeft(value: number): number{
+        let result = (value << 1) + (this.r8[F] & Flags.C) ? 1 : 0;
+        if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+        this.shiftRotateFlags(result);
+        return result;
+    }
+
+    rotateLeftCarry(value: number): number {
+        let result = (value << 1);
+        // If we have a carry set bit 0 and the carry flag
+        if (result & 0x100) {
+            result |= 1;
+            this.r8[F] |= Flags.C 
+        } else { 
+            this.r8[F] &= ~Flags.C 
+        }
+        this.shiftRotateFlags(result);
+        return result;
+    }
+
+    rotateRight(value: number): number {
+        // bit 0 will be shifted to the carry
+        let carry = value & 1;
+        // Do shifting and add carry as bit 7 (0x80)
+        let result = (value >> 1) + (this.r8[F] & Flags.C) ? 0x80 : 0;
+        
+        // Store bit 0 into the carry
+        if (carry) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Set flags
+        this.shiftRotateFlags(result);
+        return result;
+    }
+
+    rotateRightCarry(value: number): number {
+        // bit 0 will be shifted to the carry
+        let bit0 = value & 1;
+        // Do shifting and add bit0 as bit 7 (0x80)
+        let result = (value >> 1) + bit0 ? 0x80 : 0;
+        
+        // Store bit0 into the carry
+        if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Set flags
+        this.shiftRotateFlags(result);
+        return result;
     }
 
     generateEvenParityTable() {
