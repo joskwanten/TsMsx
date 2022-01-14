@@ -124,6 +124,44 @@ export class Z80 implements CPU {
         return result;
     }
 
+    addSub16(value1: number, value2: number, sub: boolean, carry: boolean): number {
+        // If carry has to be taken into account add one to the second operand
+        if (carry && (this.r8[F] & Flags.C)) {
+            value2 += 1;
+        }
+
+        if (sub) {
+            // Substraction is the same as an addition except that it
+            // uses the 2's-complement value for the computation
+            value2 = (~(value2 - 1)) & 0xffff
+        }
+
+        let result = value1 + value2;
+
+        // Set / Reset N flag depending if it is an addition or substraction
+        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
+
+        // Set Zero flag if result is zero
+        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= ((result >> 8) & Flags.S_F5_F3); // Set bits if set in the result
+
+        // Set carry if bit 9 is set
+        if (result & 0x10000) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Overflow, if signs of both values are the same and the sign result is different, then we have
+        // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
+        let overflow = ((value1 & 0x8000) == (value2 & 0x8000)) && ((result & 0x8000) != (value1 & 0x8000));
+
+        // Set carry if bit 9 is set
+        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+
+        return result;
+    }
+
+
     incDec8(value: number, inc: boolean): number {
         // Add 1 or in case of decrement the two's complement of one
         let result = value + (inc ? 0x01 : 0xff);

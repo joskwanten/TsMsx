@@ -4,12 +4,19 @@ const csv = require('csv-parser')
 const fs = require('fs');
 const { emit } = require('process');
 const results = [];
+const generateLoggingCode = true;
 
 let mnemonic = /(?<opcode>\w+)( )?(?<operand>(\()?\w+(\+o)?(\))?)(,?)(?<operand2>(\()?\w+(\+o)?([\),'])?)?$/
 let indirect = /\((?<reg>(\w+)(\+o)?)\)/
 
 function emitCode(code) {
     console.log(code);
+}
+
+function emitLog(code) {
+    if (generateLoggingCode) {
+        console.log(code);
+    }
 }
 
 function emitComment(comment) {
@@ -91,11 +98,11 @@ const registersLD = {
     'L': { type: 8, src: 'let val = this.r8[L];', dst: 'this.r8[L] = val;', direct: 'this.r8[L]' },
     'I': { type: 8, src: 'let val = this.r8[I];', dst: 'this.r8[I] = val;', direct: 'this.r8[I]' },
     'R': { type: 8, src: 'let val = this.r8[R];', dst: 'this.r8[R] = val;', direct: 'this.r8[R]' },
-    'AF': { type: 16, src: 'let val = this.r16[AF];', dst: 'this.r16[AF] = val;', direct: 'this.r8[AF]' },
-    'BC': { type: 16, src: 'let val = this.r16[BC];', dst: 'this.r16[BC] = val;', direct: 'this.r8[BC]' },
-    'DE': { type: 16, src: 'let val = this.r16[DE];', dst: 'this.r16[DE] = val;', direct: 'this.r8[DE]' },
-    'HL': { type: 16, src: 'let val = this.r16[HL];', dst: 'this.r16[HL] = val;', direct: 'this.r8[HL]' },
-    'SP': { type: 16, src: 'let val = this.r16[SP];', dst: 'this.r16[SP] = val;', direct: 'this.r8[SP]' },
+    'AF': { type: 16, src: 'let val = this.r16[AF];', dst: 'this.r16[AF] = val;', direct: 'this.r16[AF]' },
+    'BC': { type: 16, src: 'let val = this.r16[BC];', dst: 'this.r16[BC] = val;', direct: 'this.r16[BC]' },
+    'DE': { type: 16, src: 'let val = this.r16[DE];', dst: 'this.r16[DE] = val;', direct: 'this.r16[DE]' },
+    'HL': { type: 16, src: 'let val = this.r16[HL];', dst: 'this.r16[HL] = val;', direct: 'this.r16[HL]' },
+    'SP': { type: 16, src: 'let val = this.r16[SP];', dst: 'this.r16[SP] = val;', direct: 'this.r16[SP]' },
     '(BC)': { type: 8, src: 'let val = this.memory.uread8(this.r16[BC]);', dst: 'this.memory.uwrite8(this.r16[BC], val);' },
     '(DE)': { type: 8, src: 'let val = this.memory.uread8(this.r16[DE]);', dst: 'this.memory.uwrite8(this.r16[DE], val);' },
     '(HL)': { type: 8, src: 'let val = this.memory.uread8(this.r16[HL]);', dst: 'this.memory.uwrite8(this.r16[HL], val);' },
@@ -176,7 +183,37 @@ function generateLDOpcode(r, dst, src, opcode) {
         .replace(/,n/, ',${val}');
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+
+function generateAddSubCpOpcode(r, dst, src, opcode) {
+    generateLambda(r, opcode);
+
+    emitCode(registersLD[src].src);
+    let sbc = r.Instruction.indexOf('SBC ') >= 0;
+    let adc = r.Instruction.indexOf('ADC ') >= 0;
+    let add = r.Instruction.indexOf('ADD ') >= 0;
+    let cp = r.Instruction.indexOf('CP ') >= 0;
+    let carry = sbc || adc;
+    let adding = add || adc;
+
+    let store = cp ? '' : `${registersLD[dst].direct} = `
+    if (registersLD[src].type == 16) {
+        emitCode(`${store}this.addSub16(${registersLD[dst].direct}, val, ${adding}, ${carry})`);
+    } else {
+        emitCode(`${store}this.addSub8(${registersLD[dst].direct}, val, ${adding}, ${carry})`);
+    }
+
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/,nn/, ',${val}')
+        .replace(/,\(nn\)/, ',(${val})')
+        .replace(/,n/, ',${val}');
+
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
 
@@ -197,7 +234,7 @@ function generateJPOpcode(r, condition, src, opcode) {
         emitCode(`this.r16[PC] = val;`)
     }
     emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
 
@@ -235,7 +272,7 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
 
-    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
 
@@ -264,7 +301,7 @@ function generateIncDecOpcode(r, src, opcode, inc) {
         emitCode(registersLD[src].dst)
     }
 
-    emitCode(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
 
@@ -281,7 +318,13 @@ function generateAndOrXorOpcode(r, src, opcode, operation) {
 
     emitCode(`this.logicalOperation(${val}, LogicalOperation.${operation});`);
 
-    emitCode(`this.log(addr, \`${instr}\`)`);
+    if (src === 'n') {
+        emitLog(`this.log(addr, \`${operation} \${val}\`)`);
+    } else {
+        src = src.replace(/\+o/, '+${o}');
+        emitLog(`this.log(addr, \`${operation} ${src}\`)`);
+    }
+
     emitCode(`});\n`);
 }
 
@@ -383,6 +426,46 @@ function generateLD(row) {
         });
     } else {
         generateLDOpcode(row, dst, src, opcode);
+    }
+}
+
+function generateAddSub(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let dst = match.groups["operand"];
+    let src = match.groups["operand2"];
+
+    if (!src) {
+        src = dst;
+        dst = 'A';
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+
+    // TODO: generate flag behavior for I and R registers.
+    // In all other cases no flags are affected
+    if (src == 'r') {
+        Object.entries(rLookup).forEach(c => {
+            let r = c[0];
+            generateAddSubCpOpcode(row, dst, c[1], fillRInOpcode(opcode, r));
+        });
+    } else if (src.match(/p/)) {
+        Object.entries(pLookup).forEach(c => {
+            let p = c[0];
+            generateAddSubCpOpcode(row, dst, c[1], fillPInOpcode(opcode, p));
+        });
+    } else if (src.match(/q/)) {
+        Object.entries(pLookup).forEach(c => {
+            let q = c[0];
+            generateAddSubCpOpcode(row, dst, c[1], fillQInOpcode(opcode, q));
+        });
+    } else {
+        generateAddSubCpOpcode(row, dst, src, opcode);
     }
 }
 
@@ -511,10 +594,34 @@ async function generateCode() {
                 //     generateLD(r);
                 // });
 
-                results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
+                // results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
+                //     generateADC(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
+                //     generateADC(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // TODO: Rotate functions!
+                results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                    generateAddSub(r);
+                });
 
                 res();
             });
