@@ -190,6 +190,18 @@ function generateLDOpcode(r, dst, src, opcode) {
     emitCode(`});\n`);
 }
 
+function generateBitOpcode(r, dst, src, opcode) {
+    generateLambda(r, opcode);
+    emitCode(registersLD[src].src);
+    emitCode(`this.bit(${dst}, val)`);
+
+    let instr = r.Instruction.replace(/b/, dst).replace(/r/, src);
+
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
 
 function generateAddSubCpOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
@@ -223,7 +235,7 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
 function generateShiftRotateOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
 
-    let operation = r.Instruction.indexOf('RL ') >= 0  || r.Instruction == 'RLA' ? 'rotateLeft' :
+    let operation = r.Instruction.indexOf('RL ') >= 0 || r.Instruction == 'RLA' ? 'rotateLeft' :
         r.Instruction.indexOf('RR ') >= 0 || r.Instruction == 'RRA' ? 'rotateRight' :
             r.Instruction.indexOf('RLC ') >= 0 ? 'rotateLeftCarry' :
                 r.Instruction.indexOf('RRC ') >= 0 ? 'rotateRightCarry' :
@@ -333,7 +345,7 @@ function generatePushPopOpcode(r, operand, opcode) {
 
     let push = r.Instruction.indexOf('PUSH ') >= 0;
 
-    if (push) { 
+    if (push) {
         emitCode(`this.r16[SP] -= 2;`);
         emitCode(`this.memory.uwrite16(this.r16[SP], ${registersLD[operand].direct});`);
     } else {
@@ -453,6 +465,13 @@ function fillQInOpcode(opcode, q) {
     })
 }
 
+function fillBAndRInOpcode(opcode, b, r) {
+    return opcode.map(x => x.replace(/b/, b).replace(/r/, r))
+        .map(x => '0x' + x)
+        .map(x => x == '0xo' ? 'o' : eval(x))
+        .map(x => x.toString(16).toUpperCase())
+}
+
 function fillQInOpcodeMul(opcode, q) {
     let regex = /(?<base>\w+)\*q/
     return opcode.map(o => {
@@ -495,6 +514,34 @@ function generateLD(row) {
         });
     } else {
         generateLDOpcode(row, dst, src, opcode);
+    }
+}
+
+function generateBit(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let dst = match.groups["operand"];
+    let src = match.groups["operand2"];
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+
+
+    if (src == 'r') {
+        [...Array(8).keys()].forEach(b => {
+            Object.entries(rLookup).forEach(r => {
+                opcodeWithB= fillBAndRInOpcode(opcode, b, r[0]);
+                generateBitOpcode(row, b, r[1], opcodeWithB);
+            });
+        });
+    } else {
+        [...Array(8).keys()].forEach(b => {
+            opcodeWithB= fillBAndRInOpcode(opcode, b);
+            generateBitOpcode(row, b, src, opcodeWithB);
+        });
     }
 }
 
@@ -773,12 +820,16 @@ async function generateCode() {
                 //     generateRet(r);
                 // });
 
-                results.filter(r => r.Instruction.indexOf('PUSH') == 0).forEach(r => {
-                    generatePushPop(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('PUSH') == 0).forEach(r => {
+                //     generatePushPop(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('POP') == 0).forEach(r => {
-                    generatePushPop(r);
+                // results.filter(r => r.Instruction.indexOf('POP') == 0).forEach(r => {
+                //     generatePushPop(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('BIT ') == 0).forEach(r => {
+                    generateBit(r);
                 });
 
                 res();

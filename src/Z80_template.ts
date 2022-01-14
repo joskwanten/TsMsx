@@ -325,6 +325,16 @@ export class Z80 implements CPU {
             });
     }
 
+    bit(n: number, value: number) {
+        // Opposite of the nth bit is written into the Z flag. 
+        // C is preserved, 
+        // N is reset, H is set, and S and P/V are undefined.
+        let mask = 1 << n;
+        if(value & mask) { this.r8[F] &= ~Flags.Z } else {this.r8[F] |= Flags.Z };
+        this.r8[F] &= ~Flags.N;
+        this.r8[F] |= Flags.H;
+    }
+
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
         // Generate parity table for fast computation of parity
         this.generateEvenParityTable();
