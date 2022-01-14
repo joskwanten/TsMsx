@@ -404,6 +404,9 @@ export class Z80 implements CPU {
 
     }
 
+    addInstructionCB(opcode: number, func: (addr: number) => void) {
+        this.opcodesCB[opcode] = func;
+    }
 
     addInstructionED(opcode: number, func: (addr: number) => void) {
         this.opcodesED[opcode] = func;

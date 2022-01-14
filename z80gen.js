@@ -134,7 +134,7 @@ function generateLambda(r, opcode) {
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     } else if (opcode[0] === 'DD') {
         if (opcode[1] === 'CB') {
-            emitCode(`this.addInstructionDDCB(0x${opcode[2]}, (addr: number) => {`);
+            emitCode(`this.addInstructionDDCB(0x${opcode[3]}, (addr: number, o: number) => {`);
             emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
             emitCode(`this.addInstructionDD(0x${opcode[1]}, (addr: number) => {`);
@@ -145,7 +145,7 @@ function generateLambda(r, opcode) {
         }
     } else if (opcode[0] === 'FD') {
         if (opcode[1] === 'CB') {
-            emitCode(`this.addInstructionFDCB(0x${opcode[1]}, (addr: number) => {`);
+            emitCode(`this.addInstructionFDCB(0x${opcode[3]}, (addr: number, o: number) => {`);
             emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
             emitCode(`this.addInstructionFD(0x${opcode[1]}, (addr: number) => {`);
@@ -221,8 +221,8 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
 function generateShiftRotateOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
 
-    let operation = r.Instruction.indexOf('RL ') >= 0 ? 'rotateLeft' :
-        r.Instruction.indexOf('RR ') >= 0 ? 'rotateRight' :
+    let operation = r.Instruction.indexOf('RL ') >= 0  || r.Instruction == 'RLA' ? 'rotateLeft' :
+        r.Instruction.indexOf('RR ') >= 0 || r.Instruction == 'RRA' ? 'rotateRight' :
             r.Instruction.indexOf('RLC ') >= 0 ? 'rotateLeftCarry' :
                 r.Instruction.indexOf('RRC ') >= 0 ? 'rotateRightCarry' :
                     r.Instruction.indexOf('SLA ') >= 0 ? 'shiftLeftArithmetic' :
@@ -510,6 +510,10 @@ function generateShiftRotate(row) {
     let dst = match.groups["operand"];
     let src = match.groups["operand2"];
 
+    if (!dst) {
+        dst = 'A';
+    }
+
     if (!src) {
         src = dst;
         dst = 'A';
@@ -679,8 +683,27 @@ async function generateCode() {
                 //     generateAddSub(r);
                 // });
 
-                // TODO: Rotate functions!
-                results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                // results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('RLC ') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('RR ') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('RRC ') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('RLA') == 0).forEach(r => {
+                    generateShiftRotate(r);
+                });
+
+                results.filter(r => r.Instruction.indexOf('RRA') == 0).forEach(r => {
                     generateShiftRotate(r);
                 });
 
