@@ -247,7 +247,7 @@ export class Z80 implements CPU {
     rotateRight(value: number): number {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
-        
+
         // Do shifting and add carry as bit 7 (0x80)
         let result = (value >> 1) + (this.r8[F] & Flags.C) ? 0x80 : 0;
         
@@ -273,7 +273,7 @@ export class Z80 implements CPU {
         return result;
     }
 
-    shiftLeftArithmetic(value: number): number {
+    shiftLeft(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value << 1);
         
@@ -285,9 +285,24 @@ export class Z80 implements CPU {
         return result;
     }
 
+    shiftRightLogic(value: number): number {
+        // Do shifting and add bit0 as bit 7 (0x80)
+        let result = (value >> 1);
+        
+        // Store original bit0 into the carry
+        if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Set flags
+        this.shiftRotateFlags(result);
+        return result;
+    }
+
     shiftRightArithmetic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value >> 1);
+        
+        // Copy bit 7 from the original value to maintain the same sign
+        result |= (value & 0x80);
         
         // Store original bit0 into the carry
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
