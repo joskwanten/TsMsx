@@ -6,7 +6,7 @@ const { emit } = require('process');
 const results = [];
 const generateLoggingCode = true;
 
-let mnemonic = /(?<opcode>\w+)( )?(?<operand>(\()?\w+(\+o)?(\))?)(,?)(?<operand2>(\()?\w+(\+o)?([\),'])?)?$/
+let mnemonic = /(?<opcode>\w+)( )?(?<operand>(\()?\w+(\+o)?(\))?)?(,?)(?<operand2>(\()?\w+(\+o)?([\),'])?)?$/
 let indirect = /\((?<reg>(\w+)(\+o)?)\)/
 
 function emitCode(code) {
@@ -41,6 +41,8 @@ this.memory.uwrite16(nn, val);`;
 let n_fetch = `let n = this.memory.uread8(this.r16[PC]++);`;
 
 let stack_pc = `this.r16[SP] -= 2;\nthis.memory.uwrite16(this.r16[SP], this.r16[PC]);`
+
+let pop_pc = `this.r16[PC] = this.memory.uread16(this.r16[SP]);\nthis.r16[SP] += 2;`
 
 const conditions = {
     C: '(this.r8[F] & Flags.C)',
@@ -304,6 +306,42 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
     }
 
     emitLog(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+function generateRetOpcode(r, condition, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80.split('/');
+    generateLambda(r, opcode);
+
+    if (condition) { emitCode(`if (${conditions[condition]}) {`); }
+    emitCode(pop_pc); // Call puts program counter on the stack
+    emitCode(`this.cycles += ${timings[0]};`);
+    if (condition) { emitCode(`} else {`); }
+    if (condition) { emitCode(`this.cycles += ${timings[1]};`); }
+    if (condition) { emitCode(`}`); }
+    emitLog(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+function generatePushPopOpcode(r, operand, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80;
+    generateLambda(r, opcode);
+
+    let push = r.Instruction.indexOf('PUSH ') >= 0;
+
+    if (push) { 
+        emitCode(`this.r16[SP] -= 2;`);
+        emitCode(`this.memory.uwrite16(this.r16[SP], ${registersLD[operand].direct});`);
+    } else {
+        emitCode(`${registersLD[operand].direct} = this.memory.uread16(this.r16[SP]);`);
+        emitCode(`this.r16[SP] += 2;`);
+    }
+    emitCode(`this.cycles += ${timings};`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
 }
 
@@ -613,6 +651,30 @@ function generateAndOrXor(row, operation) {
     }
 }
 
+function generateRet(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    let condition = match.groups["operand"];
+    generateRetOpcode(row, condition, opcode);
+}
+
+function generatePushPop(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    let operand = match.groups["operand"];
+    generatePushPopOpcode(row, operand, opcode);
+}
+
 async function generateCode() {
     await new Promise((res, rej) => {
         fs.createReadStream('Opcodes.csv')
@@ -699,12 +761,24 @@ async function generateCode() {
                 //     generateShiftRotate(r);
                 // });
 
-                results.filter(r => r.Instruction.indexOf('RLA') == 0).forEach(r => {
-                    generateShiftRotate(r);
+                // results.filter(r => r.Instruction.indexOf('RLA') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('RRA') == 0).forEach(r => {
+                //     generateShiftRotate(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('RET') == 0).forEach(r => {
+                //     generateRet(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('PUSH') == 0).forEach(r => {
+                    generatePushPop(r);
                 });
 
-                results.filter(r => r.Instruction.indexOf('RRA') == 0).forEach(r => {
-                    generateShiftRotate(r);
+                results.filter(r => r.Instruction.indexOf('POP') == 0).forEach(r => {
+                    generatePushPop(r);
                 });
 
                 res();
