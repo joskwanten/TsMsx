@@ -84,7 +84,9 @@ export class Z80 implements CPU {
     opcodesED: ((addr: number) => void)[] = [];
     opcodesDD: ((addr: number) => void)[] = [];
     opcodesFD: ((addr: number) => void)[] = [];
-    opcodesCD: ((addr: number) => void)[] = [];
+    opcodesCB: ((addr: number) => void)[] = [];
+    opcodesDDCB: ((addr: number, o: number) => void)[] = [];
+    opcodesFDCB: ((addr: number, o: number) => void)[] = [];
     evenParity: boolean[] = [];
 
     addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
@@ -303,7 +305,7 @@ export class Z80 implements CPU {
         
         // Copy bit 7 from the original value to maintain the same sign
         result |= (value & 0x80);
-        
+
         // Store original bit0 into the carry
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
@@ -339,11 +341,20 @@ export class Z80 implements CPU {
             let opcode = this.memory.uread8(this.r16[PC]++);
             this.opcodesFD[opcode](addr);
         }
-        this.opcodes[0xCD] = (addr) => {
+        this.opcodes[0xCB] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesCD[opcode](addr);
+            this.opcodesCB[opcode](addr);
         }
-
+        this.opcodesDD[0xCB] = (addr) => {
+            let o = this.memory.uread8(this.r16[PC]++);
+            let opcode = this.memory.uread8(this.r16[PC]++);
+            this.opcodesDDCB[opcode](addr, o);
+        }
+        this.opcodesFD[0xCB] = (addr) => {
+            let o = this.memory.uread8(this.r16[PC]++);
+            let opcode = this.memory.uread8(this.r16[PC]++);
+            this.opcodesFDCB[opcode](addr, o);
+        }
         this.addOpcodes();
     }
     halt(): void {
@@ -404,6 +415,14 @@ export class Z80 implements CPU {
 
     addInstructionFD(opcode: number, func: (addr: number) => void) {
         this.opcodesFD[opcode] = func;
+    }
+
+    addInstructionDDCB(opcode: number, func: (addr: number, o: number) => void) {
+        this.opcodesDDCB[opcode] = func;
+    }
+
+    addInstructionFDCB(opcode: number, func: (addr: number, o: number) => void) {
+        this.opcodesFDCB[opcode] = func;
     }
 
     addInstruction(opcode: number, func: (addr: number) => void) {

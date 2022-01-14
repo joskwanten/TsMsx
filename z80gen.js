@@ -133,7 +133,7 @@ function generateLambda(r, opcode) {
         emitCode(`this.addInstructionCB(0x${opcode[1]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
     } else if (opcode[0] === 'DD') {
-        if (opcode[1] === 'CD') {
+        if (opcode[1] === 'CB') {
             emitCode(`this.addInstructionDDCB(0x${opcode[2]}, (addr: number) => {`);
             emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
         } else {
@@ -215,6 +215,36 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
+    emitCode(`});\n`);
+}
+
+function generateShiftRotateOpcode(r, dst, src, opcode) {
+    generateLambda(r, opcode);
+
+    let operation = r.Instruction.indexOf('RL ') >= 0 ? 'rotateLeft' :
+        r.Instruction.indexOf('RR ') >= 0 ? 'rotateRight' :
+            r.Instruction.indexOf('RLC ') >= 0 ? 'rotateLeftCarry' :
+                r.Instruction.indexOf('RRC ') >= 0 ? 'rotateRightCarry' :
+                    r.Instruction.indexOf('SLA ') >= 0 ? 'shiftLeftArithmetic' :
+                        r.Instruction.indexOf('SRA ') >= 0 ? 'shiftRightArithmetic' :
+                            r.Instruction.indexOf('SRL ') >= 0 ? 'shiftRightLogic' : 'unknown';
+
+    if (registersLD[src].direct) {
+        emitCode(`${registersLD[dst].direct} = this.${operation}(${registersLD[dst].direct});`);
+    } else {
+        emitCode(registersLD[src].src);
+        emitCode(`val = this.${operation}(val);`);
+        emitCode(registersLD[src].dst)
+    }
+
+    let instr = r.Instruction.replace(/r/, src)
+        .replace(/o/, '${o}')
+        .replace(/,nn/, ',${val}')
+        .replace(/,\(nn\)/, ',(${val})')
+        .replace(/,n/, ',${val}');
+
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
 }
 
@@ -470,6 +500,36 @@ function generateAddSub(row) {
     }
 }
 
+function generateShiftRotate(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let dst = match.groups["operand"];
+    let src = match.groups["operand2"];
+
+    if (!src) {
+        src = dst;
+        dst = 'A';
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    //console.log(opcode);
+
+    // TODO: generate flag behavior for I and R registers.
+    // In all other cases no flags are affected
+    if (src == 'r') {
+        Object.entries(rLookup).forEach(c => {
+            let r = c[0];
+            generateShiftRotateOpcode(row, c[1], c[1], fillRInOpcode(opcode, r));
+        });
+    } else {
+        generateShiftRotateOpcode(row, dst, src, opcode);
+    }
+}
+
 function generateJPJR(row) {
     //console.log(r);
     let match = mnemonic.exec(row.Instruction);
@@ -555,74 +615,74 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                    generateJPJR(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                //     generateJPJR(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                    generateIncDec(r, true);
-                });
+                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                //     generateIncDec(r, true);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
-                    generateIncDec(r, false);
-                });
+                // results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
+                //     generateIncDec(r, false);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'AND');
-                });
+                // results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'AND');
+                // });
 
-                results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'OR');
-                });
+                // results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'OR');
+                // });
 
-                results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
-                    generateAndOrXor(r, 'XOR');
-                });
+                // results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
+                //     generateAndOrXor(r, 'XOR');
+                // });
 
-                results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
-                    generateLD(r);
-                });
+                // results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
+                //     generateLD(r);
+                // });
 
-                results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
-                    generateAddSub(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
-                    generateAddSub(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
-                    generateAddSub(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
-                    generateAddSub(r);
-                });
-
-                results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
-                    generateAddSub(r);
-                });
-
-                // // TODO: Rotate functions!
-                // results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                // results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
                 //     generateAddSub(r);
                 // });
+
+                // results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
+
+                // TODO: Rotate functions!
+                results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                    generateShiftRotate(r);
+                });
 
                 res();
             });
