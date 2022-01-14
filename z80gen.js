@@ -38,9 +38,7 @@ let nn_write_ind16 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
 this.memory.uwrite16(nn, val);`;
 
-let n_read = `
-let val = this.memory.uread8(this.r16[PC]++);    
-`;
+let n_fetch = `let n = this.memory.uread8(this.r16[PC]++);`;
 
 let stack_pc = `this.r16[SP] -= 2;\nthis.memory.uwrite16(this.r16[SP], this.r16[PC]);`
 
@@ -169,6 +167,9 @@ function generateLDOpcode(r, dst, src, opcode) {
         emitCode(`${registersLD[dst].direct} = ${registersLD[src].direct}`);
     } else {
         emitCode(registersLD[src].src);
+        if (dst == '(n)') {
+            emitCode(n_fetch);
+        }
         if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
             emitCode(registersLD[dst].dst16);
         } else {
@@ -554,74 +555,74 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
+                    generateJPJR(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                //     generateIncDec(r, true);
-                // });
+                results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
+                    generateIncDec(r, true);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
-                //     generateIncDec(r, false);
-                // });
+                results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
+                    generateIncDec(r, false);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'AND');
-                // });
+                results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'AND');
+                });
 
-                // results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'OR');
-                // });
+                results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'OR');
+                });
 
-                // results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'XOR');
-                // });
+                results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
+                    generateAndOrXor(r, 'XOR');
+                });
 
-                // results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
+                results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
+                    generateLD(r);
+                });
 
-                // results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
-                //     generateADC(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
-                //     generateADC(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // TODO: Rotate functions!
-                results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
                     generateAddSub(r);
                 });
+
+                results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
+                    generateAddSub(r);
+                });
+
+                results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
+                    generateAddSub(r);
+                });
+
+                results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
+                    generateAddSub(r);
+                });
+
+                results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
+                    generateAddSub(r);
+                });
+
+                // // TODO: Rotate functions!
+                // results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
+                //     generateAddSub(r);
+                // });
 
                 res();
             });
