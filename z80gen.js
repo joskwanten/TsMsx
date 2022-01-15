@@ -241,13 +241,13 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
 function generateShiftRotateOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
 
-    let operation = r.Instruction.indexOf('RL ') >= 0 || r.Instruction == 'RLA' ? 'rotateLeft' :
-        r.Instruction.indexOf('RR ') >= 0 || r.Instruction == 'RRA' ? 'rotateRight' :
-            r.Instruction.indexOf('RLC ') >= 0 ? 'rotateLeftCarry' :
-                r.Instruction.indexOf('RRC ') >= 0 ? 'rotateRightCarry' :
-                    r.Instruction.indexOf('SLA ') >= 0 ? 'shiftLeftArithmetic' :
-                        r.Instruction.indexOf('SRA ') >= 0 ? 'shiftRightArithmetic' :
-                            r.Instruction.indexOf('SRL ') >= 0 ? 'shiftRightLogic' : 'unknown';
+    let operation = r.Instruction.indexOf('RL ') == 0 || r.Instruction == 'RLA' ? 'rotateLeft' :
+        r.Instruction.indexOf('RR ') == 0 || r.Instruction == 'RRA' ? 'rotateRight' :
+            r.Instruction.indexOf('RLC ') == 0 ? 'rotateLeftCarry' :
+                r.Instruction.indexOf('RRC ') == 0 ? 'rotateRightCarry' :
+                    r.Instruction.indexOf('SLA ') == 0 ? 'shiftLeftArithmetic' :
+                        r.Instruction.indexOf('SRA ') == 0 ? 'shiftRightArithmetic' :
+                            r.Instruction.indexOf('SRL ') == 0 ? 'shiftRightLogic' : 'unknown';
 
     if (registersLD[src].direct) {
         emitCode(`${registersLD[dst].direct} = this.${operation}(${registersLD[dst].direct});`);
@@ -734,112 +734,40 @@ async function generateCode() {
             .pipe(csv({ separator: ';' }))
             .on('data', (data) => results.push(data))
             .on('end', () => {
-                // results.filter(r => r.Instruction.indexOf('LD ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('JP ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('JR ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('CALL ') == 0).forEach(r => {
-                //     generateJPJR(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('INC ') == 0).forEach(r => {
-                //     generateIncDec(r, true);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('DEC ') == 0).forEach(r => {
-                //     generateIncDec(r, false);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('AND ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'AND');
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('OR ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'OR');
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('XOR ') == 0).forEach(r => {
-                //     generateAndOrXor(r, 'XOR');
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('OUT ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('IN ') == 0).forEach(r => {
-                //     generateLD(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('ADC ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('ADD ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('SBC ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('SUB ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('CP ') == 0).forEach(r => {
-                //     generateAddSub(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RL ') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RLC ') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RR ') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RRC ') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RLA') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RRA') == 0).forEach(r => {
-                //     generateShiftRotate(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('RET') == 0).forEach(r => {
-                //     generateRet(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('PUSH') == 0).forEach(r => {
-                //     generatePushPop(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('POP') == 0).forEach(r => {
-                //     generatePushPop(r);
-                // });
-
-                // results.filter(r => r.Instruction.indexOf('BIT ') == 0).forEach(r => {
-                //     generateBit(r);
-                // });
-
-                results.filter(r => r.Instruction.indexOf('SET ') == 0).forEach(r => {
-                    generateBitAndSet(r);
+                results.forEach(r => {
+                    // if (r.Instruction.indexOf('LD ') == 0) { generateLD(r); }
+                    // else if (r.Instruction.indexOf('JP ') == 0) { generateJPJR(r); } 
+                    // else if (r.Instruction.indexOf('JR ') == 0) { generateJPJR(r); }
+                    // else if (r.Instruction.indexOf('CALL ') == 0) { generateJPJR(r); }
+                    // else if (r.Instruction.indexOf('INC ') == 0) { generateIncDec(r, true); }
+                    // else if (r.Instruction.indexOf('DEC ') == 0) { generateIncDec(r, false); }
+                    // else if (r.Instruction.indexOf('AND ') == 0) { generateAndOrXor(r, 'AND'); }
+                    // else if (r.Instruction.indexOf('OR ') == 0) { generateAndOrXor(r, 'OR'); }
+                    // else if (r.Instruction.indexOf('XOR ') == 0) { generateAndOrXor(r, 'XOR'); }
+                    // else if (r.Instruction.indexOf('OUT ') == 0) { generateLD(r); }
+                    // else if (r.Instruction.indexOf('IN ') == 0) { generateLD(r); }
+                    // else if (r.Instruction.indexOf('ADC ') == 0) { generateAddSub(r); }
+                    // else if (r.Instruction.indexOf('ADD ') == 0) { generateAddSub(r); }
+                    // else if (r.Instruction.indexOf('SBC ') == 0) { generateAddSub(r); }
+                    // else if (r.Instruction.indexOf('SUB ') == 0) { generateAddSub(r); }
+                    // else if (r.Instruction.indexOf('CP ') == 0) { generateAddSub(r); }
+                    // else if (r.Instruction.indexOf('RL ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RLC ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RR ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RRC ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RLA ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RRA ') == 0) { generateShiftRotate(r); }
+                    if (r.Instruction.indexOf('SLA ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('SRA ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('SRL ') == 0) { generateShiftRotate(r); }
+                    // else if (r.Instruction.indexOf('RET ') == 0) { generateRet(r); }
+                    // else if (r.Instruction.indexOf('PUSH ') == 0) { generatePushPop(r); }
+                    // else if (r.Instruction.indexOf('POP ') == 0) { generatePushPop(r); }
+                    // else if (r.Instruction.indexOf('BIT ') == 0) { generateBitAndSet(r); }
+                    // else if (r.Instruction.indexOf('SET ') == 0) { generateBitAndSet(r); }
+                    // else {
+                    //    console.error('Unhandled: ' + r.Instruction);
+                    //}
                 });
 
                 res();
