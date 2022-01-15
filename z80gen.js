@@ -190,10 +190,16 @@ function generateLDOpcode(r, dst, src, opcode) {
     emitCode(`});\n`);
 }
 
-function generateBitOpcode(r, dst, src, opcode) {
+function generateBitAndSetOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
     emitCode(registersLD[src].src);
-    emitCode(`this.bit(${dst}, val)`);
+
+    if (r.Instruction.indexOf('BIT') >= 0) {
+        emitCode(`this.bit(${dst}, val)`);
+    } else {
+        emitCode(`val = this.set(val, ${dst})`);
+        emitCode(registersLD[src].dst);
+    }
 
     let instr = r.Instruction.replace(/b/, dst).replace(/r/, src);
 
@@ -517,7 +523,7 @@ function generateLD(row) {
     }
 }
 
-function generateBit(row) {
+function generateBitAndSet(row) {
     //console.log(r);
     let match = mnemonic.exec(row.Instruction);
     if (!match) {
@@ -533,14 +539,14 @@ function generateBit(row) {
     if (src == 'r') {
         [...Array(8).keys()].forEach(b => {
             Object.entries(rLookup).forEach(r => {
-                opcodeWithB= fillBAndRInOpcode(opcode, b, r[0]);
-                generateBitOpcode(row, b, r[1], opcodeWithB);
+                opcodeWithB = fillBAndRInOpcode(opcode, b, r[0]);
+                generateBitAndSetOpcode(row, b, r[1], opcodeWithB);
             });
         });
     } else {
         [...Array(8).keys()].forEach(b => {
-            opcodeWithB= fillBAndRInOpcode(opcode, b);
-            generateBitOpcode(row, b, src, opcodeWithB);
+            opcodeWithB = fillBAndRInOpcode(opcode, b);
+            generateBitAndSetOpcode(row, b, src, opcodeWithB);
         });
     }
 }
@@ -828,8 +834,12 @@ async function generateCode() {
                 //     generatePushPop(r);
                 // });
 
-                results.filter(r => r.Instruction.indexOf('BIT ') == 0).forEach(r => {
-                    generateBit(r);
+                // results.filter(r => r.Instruction.indexOf('BIT ') == 0).forEach(r => {
+                //     generateBit(r);
+                // });
+
+                results.filter(r => r.Instruction.indexOf('SET ') == 0).forEach(r => {
+                    generateBitAndSet(r);
                 });
 
                 res();

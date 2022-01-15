@@ -335,6 +335,13 @@ export class Z80 implements CPU {
         this.r8[F] |= Flags.H;
     }
 
+    set(n: number, value: number) {
+        // Create a mask where the bit is set and do a bitwise or
+        // to set the bit
+        let mask = 1 << n;
+        return n | mask;
+    }
+
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
         // Generate parity table for fast computation of parity
         this.generateEvenParityTable();
