@@ -640,7 +640,7 @@ export class Z80 implements CPU {
                         let inc = y === 4 || y == 6;
 
                         for (let i = 0; i < repeat; i++) {
-                            this.r16[HL] = this.memory.uread8(this.r8[C]);
+                           this.memory.uwrite8(this.r16[HL], this.IO.read8(this.r8[C]));
 
                             if (inc) {
                                 this.r16[HL]++;

@@ -88,6 +88,7 @@ const flagSet = {
 
 const registersLD = {
     'A': { type: 8, src: 'let val = this.r8[A];', dst: 'this.r8[A] = val;', direct: 'this.r8[A]' },
+    'AF\'': { type: 8, src: 'let val = this.r16s[AF];', dst: 'this.r16s[AF] = val;', direct: 'this.r16s[AF]' },
     'F': { type: 8, src: 'let val = this.r8[F];', dst: 'this.r8[F] = val;', direct: 'this.r8[F]' },
     'B': { type: 8, src: 'let val = this.r8[B];', dst: 'this.r8[B] = val;', direct: 'this.r8[B]' },
     'C': { type: 8, src: 'let val = this.r8[C];', dst: 'this.r8[C] = val;', direct: 'this.r8[C]' },
@@ -108,6 +109,7 @@ const registersLD = {
     '(HL)': { type: 8, src: 'let val = this.memory.uread8(this.r16[HL]);', dst: 'this.memory.uwrite8(this.r16[HL], val);' },
     '(IX)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IX]);', dst: 'this.memory.uwrite8(this.r16[IX], val);' },
     '(IY)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY]);', dst: 'this.memory.uwrite8(this.r16[IY], val);' },
+    '(SP)': { type: 16, src: 'let val = this.memory.uread16(this.r16[SP]);', dst: 'this.memory.uwrite16(this.r16[SP], val);' },
     'HL\'': { type: 16, src: 'let val = this.r16s[HL];', dst: 'this.r16s[HL] = val;', direct: 'this.r16s[HL]' },
     'IXh': { type: 8, src: 'let val = this.r8[IXh];', dst: 'this.r8[IXh] = val;', direct: 'this.r8[IXh]' },
     'IXl': { type: 8, src: 'let val = this.r8[IXl];', dst: 'this.r8[IXl] = val;', direct: 'this.r8[IXl]' },
@@ -194,10 +196,13 @@ function generateBitAndSetOpcode(r, dst, src, opcode) {
     generateLambda(r, opcode);
     emitCode(registersLD[src].src);
 
-    if (r.Instruction.indexOf('BIT') >= 0) {
+    if (r.Instruction.indexOf('BIT') == 0) {
         emitCode(`this.bit(${dst}, val)`);
-    } else {
+    } else if (r.Instruction.indexOf('SET') == 0) {
         emitCode(`val = this.set(val, ${dst})`);
+        emitCode(registersLD[src].dst);
+    } else {
+        emitCode(`val = this.res(val, ${dst})`);
         emitCode(registersLD[src].dst);
     }
 
@@ -245,7 +250,7 @@ function generateShiftRotateOpcode(r, dst, src, opcode) {
         r.Instruction.indexOf('RR ') == 0 || r.Instruction == 'RRA' ? 'rotateRight' :
             r.Instruction.indexOf('RLC ') == 0 ? 'rotateLeftCarry' :
                 r.Instruction.indexOf('RRC ') == 0 ? 'rotateRightCarry' :
-                    r.Instruction.indexOf('SLA ') == 0 ? 'shiftLeftArithmetic' :
+                    r.Instruction.indexOf('SLA ') == 0 ? 'shiftLeft' :
                         r.Instruction.indexOf('SRA ') == 0 ? 'shiftRightArithmetic' :
                             r.Instruction.indexOf('SRL ') == 0 ? 'shiftRightLogic' : 'unknown';
 
@@ -362,6 +367,79 @@ function generatePushPopOpcode(r, operand, opcode) {
     emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
 }
+
+function generateExOpcode(r, dst, src, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80;
+    generateLambda(r, opcode);
+    if (dst) {
+        emitCode(registersLD[src].src);
+        emitCode(registersLD[dst].src.replace(/val/, 'val2'));
+        emitCode(registersLD[dst].dst);
+        emitCode(registersLD[src].dst.replace(/val/, 'val2'));
+    } else {
+        emitCode('let bc = this.r16[BC];');
+        emitCode('let de = this.r16[DE];');
+        emitCode('let hl = this.r16[HL];');
+        emitCode('this.r16[BC] = this.r16s[BC];');
+        emitCode('this.r16[DE] = this.r16s[DE];');
+        emitCode('this.r16[HL] = this.r16s[HL];');
+        emitCode('this.r16s[BC] = bc;');
+        emitCode('this.r16s[DE] = de;');
+        emitCode('this.r16s[HL] = hl;');
+    }
+    emitCode(`this.cycles += ${timings};`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
+    emitCode(`});\n`);
+}
+
+function generateRstOpcode(r, operand, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80;
+    generateLambda(r, opcode);
+
+    
+
+    emitCode(`this.r16[SP] -= 2;
+    this.memory.uwrite16(this.r16[SP], this.r16[PC]);
+    this.r16[PC] = 0x${operand.replace(/H/, '')};`)
+            
+    emitCode(`this.cycles += ${timings};`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
+    emitCode(`});\n`);
+}
+
+function generateLdCpInOutOpcode(r, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80.split('/');
+    let inop = instr.indexOf('IN') == 0;
+    let inc = !(instr.indexOf('D') >= 0);
+    let repeat = instr.indexOf('R') >= 0;
+
+    generateLambda(r, opcode);
+
+    if (repeat) { 
+        emitCode(`if(this.r8[B] > 0) {`);
+        emitCode(`while(this.r8[B] > 0) {`);
+    }
+
+    emitCode(`this.ini_inid_outi_outd(${inop}, ${inc});`);
+    emitCode(`this.cycles += ${timings[0]};`);
+
+    if (repeat) { 
+        emitCode(`}`);
+        emitCode(`} else {`);
+        emitCode(`this.cycles += ${timings[1]};`);
+        emitCode(`}`)
+    }
+
+    emitLog(`this.log(addr, \`${instr}\`);`);
+    emitCode(`});\n`);
+}
+
 
 function generateIncDecOpcode(r, src, opcode, inc) {
 
@@ -728,6 +806,42 @@ function generatePushPop(row) {
     generatePushPopOpcode(row, operand, opcode);
 }
 
+function generateEx(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    let operand = match.groups["operand"];
+    let operand2 = match.groups["operand2"];
+    generateExOpcode(row, operand, operand2, opcode);
+}
+
+function generateRst(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');
+    let operand = match.groups["operand"];
+    generateRstOpcode(row, operand, opcode);
+}
+
+function generateLdCpInOut(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');    
+    generateLdCpInOutOpcode(row, opcode);
+}
+
 async function generateCode() {
     await new Promise((res, rej) => {
         fs.createReadStream('Opcodes.csv')
@@ -735,39 +849,44 @@ async function generateCode() {
             .on('data', (data) => results.push(data))
             .on('end', () => {
                 results.forEach(r => {
-                    // if (r.Instruction.indexOf('LD ') == 0) { generateLD(r); }
-                    // else if (r.Instruction.indexOf('JP ') == 0) { generateJPJR(r); } 
-                    // else if (r.Instruction.indexOf('JR ') == 0) { generateJPJR(r); }
-                    // else if (r.Instruction.indexOf('CALL ') == 0) { generateJPJR(r); }
-                    // else if (r.Instruction.indexOf('INC ') == 0) { generateIncDec(r, true); }
-                    // else if (r.Instruction.indexOf('DEC ') == 0) { generateIncDec(r, false); }
-                    // else if (r.Instruction.indexOf('AND ') == 0) { generateAndOrXor(r, 'AND'); }
-                    // else if (r.Instruction.indexOf('OR ') == 0) { generateAndOrXor(r, 'OR'); }
-                    // else if (r.Instruction.indexOf('XOR ') == 0) { generateAndOrXor(r, 'XOR'); }
-                    // else if (r.Instruction.indexOf('OUT ') == 0) { generateLD(r); }
-                    // else if (r.Instruction.indexOf('IN ') == 0) { generateLD(r); }
-                    // else if (r.Instruction.indexOf('ADC ') == 0) { generateAddSub(r); }
-                    // else if (r.Instruction.indexOf('ADD ') == 0) { generateAddSub(r); }
-                    // else if (r.Instruction.indexOf('SBC ') == 0) { generateAddSub(r); }
-                    // else if (r.Instruction.indexOf('SUB ') == 0) { generateAddSub(r); }
-                    // else if (r.Instruction.indexOf('CP ') == 0) { generateAddSub(r); }
-                    // else if (r.Instruction.indexOf('RL ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RLC ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RR ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RRC ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RLA ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RRA ') == 0) { generateShiftRotate(r); }
-                    if (r.Instruction.indexOf('SLA ') == 0) { generateShiftRotate(r); }
+                    if (r.Instruction.indexOf('LD ') == 0) { generateLD(r); }
+                    else if (r.Instruction.indexOf('JP ') == 0) { generateJPJR(r); } 
+                    else if (r.Instruction.indexOf('JR ') == 0) { generateJPJR(r); }
+                    else if (r.Instruction.indexOf('CALL ') == 0) { generateJPJR(r); }
+                    else if (r.Instruction.indexOf('INC ') == 0) { generateIncDec(r, true); }
+                    else if (r.Instruction.indexOf('DEC ') == 0) { generateIncDec(r, false); }
+                    else if (r.Instruction.indexOf('AND ') == 0) { generateAndOrXor(r, 'AND'); }
+                    else if (r.Instruction.indexOf('OR ') == 0) { generateAndOrXor(r, 'OR'); }
+                    else if (r.Instruction.indexOf('XOR ') == 0) { generateAndOrXor(r, 'XOR'); }
+                    else if (r.Instruction.indexOf('OUT ') == 0) { generateLD(r); }
+                    else if (r.Instruction.indexOf('IN ') == 0) { generateLD(r); }
+                    else if (r.Instruction.indexOf('ADC ') == 0) { generateAddSub(r); }
+                    else if (r.Instruction.indexOf('ADD ') == 0) { generateAddSub(r); }
+                    else if (r.Instruction.indexOf('SBC ') == 0) { generateAddSub(r); }
+                    else if (r.Instruction.indexOf('SUB ') == 0) { generateAddSub(r); }
+                    else if (r.Instruction.indexOf('CP ') == 0) { generateAddSub(r); }
+                    else if (r.Instruction.indexOf('RL ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('RLC ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('RR ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('RRC ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('RLA ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('RRA ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('SLA ') == 0) { generateShiftRotate(r); }
                     else if (r.Instruction.indexOf('SRA ') == 0) { generateShiftRotate(r); }
                     else if (r.Instruction.indexOf('SRL ') == 0) { generateShiftRotate(r); }
-                    // else if (r.Instruction.indexOf('RET ') == 0) { generateRet(r); }
-                    // else if (r.Instruction.indexOf('PUSH ') == 0) { generatePushPop(r); }
-                    // else if (r.Instruction.indexOf('POP ') == 0) { generatePushPop(r); }
-                    // else if (r.Instruction.indexOf('BIT ') == 0) { generateBitAndSet(r); }
-                    // else if (r.Instruction.indexOf('SET ') == 0) { generateBitAndSet(r); }
-                    // else {
-                    //    console.error('Unhandled: ' + r.Instruction);
-                    //}
+                    else if (r.Instruction.indexOf('RET') == 0) { generateRet(r); }
+                    else if (r.Instruction.indexOf('PUSH ') == 0) { generatePushPop(r); }
+                    else if (r.Instruction.indexOf('POP ') == 0) { generatePushPop(r); }
+                    else if (r.Instruction.indexOf('BIT ') == 0) { generateBitAndSet(r); }
+                    else if (r.Instruction.indexOf('SET ') == 0) { generateBitAndSet(r); }
+                    else if (r.Instruction.indexOf('RES ') == 0) { generateBitAndSet(r); }
+                    else if (r.Instruction.indexOf('EX') == 0) { generateEx(r); }
+                    else if (r.Instruction.indexOf('RST') == 0) { generateRst(r); }
+                    else if (r.Instruction.indexOf('IN') == 0) { generateLdCpInOut(r); }
+                    else if (r.Instruction.indexOf('O') == 0) { generateLdCpInOut(r); }
+                    else {
+                        //console.error('Unhandled: ' + r.Instruction);
+                    }
                 });
 
                 res();

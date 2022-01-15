@@ -1,0 +1,27 @@
+Unhandled: CCF
+Unhandled: CPD
+Unhandled: CPDR
+Unhandled: CPI
+Unhandled: CPIR
+Unhandled: CPL
+Unhandled: DAA
+Unhandled: DI
+Unhandled: DJNZ o
+Unhandled: EI
+Unhandled: HALT
+Unhandled: IM 0
+Unhandled: IM 1
+Unhandled: IM 2
+Unhandled: LDD
+Unhandled: LDDR
+Unhandled: LDI
+Unhandled: LDIR
+Unhandled: NEG
+Unhandled: NOP
+Unhandled: RLA
+Unhandled: RLCA
+Unhandled: RLD
+Unhandled: RRA
+Unhandled: RRCA
+Unhandled: RRD
+Unhandled: SCF

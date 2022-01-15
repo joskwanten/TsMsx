@@ -169,7 +169,7 @@ export class Z80 implements CPU {
         let result = value + (inc ? 0x01 : 0xff);
 
         // Reset N flag if it is an increment
-        if(!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
+        if (!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
 
         // Set Zero flag if result is zero
         if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
@@ -180,7 +180,7 @@ export class Z80 implements CPU {
         // Carry is unaffected
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ? 
+        let overflow = inc ?
             ((value & 0x80) == 0) && ((result & 0x80) != 0) :
             ((value & 0x80) == 0x80) && ((result & 0x80) != 0x80);
 
@@ -192,9 +192,9 @@ export class Z80 implements CPU {
 
     logicalOperation(value: number, operation: LogicalOperation) {
         // Add 1 or in case of decrement the two's complement of one
-        let result = (operation == LogicalOperation.AND) ? this.r8[A] & value 
+        let result = (operation == LogicalOperation.AND) ? this.r8[A] & value
             : (operation == LogicalOperation.OR) ? this.r8[A] | value
-            : this.r8[A] ^ value;
+                : this.r8[A] ^ value;
 
         // Reset N and C flags
         this.r8[F] &= ~Flags.N;
@@ -210,7 +210,7 @@ export class Z80 implements CPU {
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
-    shiftRotateFlags(result: number) { 
+    shiftRotateFlags(result: number) {
         // Reset H and N flags
         this.r8[F] &= ~Flags.H;
         this.r8[F] &= ~Flags.N;
@@ -226,7 +226,7 @@ export class Z80 implements CPU {
     }
 
 
-    rotateLeft(value: number): number{
+    rotateLeft(value: number): number {
         let result = (value << 1) + (this.r8[F] & Flags.C) ? 1 : 0;
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
         this.shiftRotateFlags(result);
@@ -238,9 +238,9 @@ export class Z80 implements CPU {
         // If we have a carry set bit 0 and the carry flag
         if (result & 0x100) {
             result |= 1;
-            this.r8[F] |= Flags.C 
-        } else { 
-            this.r8[F] &= ~Flags.C 
+            this.r8[F] |= Flags.C
+        } else {
+            this.r8[F] &= ~Flags.C
         }
         this.shiftRotateFlags(result);
         return result;
@@ -252,7 +252,7 @@ export class Z80 implements CPU {
 
         // Do shifting and add carry as bit 7 (0x80)
         let result = (value >> 1) + (this.r8[F] & Flags.C) ? 0x80 : 0;
-        
+
         // Store bit 0 into the carry
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
@@ -266,7 +266,7 @@ export class Z80 implements CPU {
         let bit0 = value & 1;
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value >> 1) + bit0 ? 0x80 : 0;
-        
+
         // Store bit0 into the carry
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
@@ -278,7 +278,7 @@ export class Z80 implements CPU {
     shiftLeft(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value << 1);
-        
+
         // Store bit0 into the carry
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
@@ -290,7 +290,7 @@ export class Z80 implements CPU {
     shiftRightLogic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value >> 1);
-        
+
         // Store original bit0 into the carry
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
@@ -302,7 +302,7 @@ export class Z80 implements CPU {
     shiftRightArithmetic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value >> 1);
-        
+
         // Copy bit 7 from the original value to maintain the same sign
         result |= (value & 0x80);
 
@@ -330,7 +330,7 @@ export class Z80 implements CPU {
         // C is preserved, 
         // N is reset, H is set, and S and P/V are undefined.
         let mask = 1 << n;
-        if(value & mask) { this.r8[F] &= ~Flags.Z } else {this.r8[F] |= Flags.Z };
+        if (value & mask) { this.r8[F] &= ~Flags.Z } else { this.r8[F] |= Flags.Z };
         this.r8[F] &= ~Flags.N;
         this.r8[F] |= Flags.H;
     }
@@ -340,6 +340,37 @@ export class Z80 implements CPU {
         // to set the bit
         let mask = 1 << n;
         return n | mask;
+    }
+
+    res(n: number, value: number) {
+        // Create a mask where the bit is 0 and other bits 1
+        let mask = ~(1 << n);
+        return n & mask;
+    }
+
+    // Method for handing the INI, IND, INIR, INDR, OUTI, OUTD, OTIR and OTDR
+    ini_inid_outi_outd(inOperation: boolean, inc: boolean) {
+        if (inOperation) {
+            // IN (read from port)
+            this.memory.uwrite8(this.r16[HL], this.IO.read8(this.r8[C]));
+        } else {
+            // OUT (write to port)
+            this.IO.write8(this.r8[C], this.memory.uread8(this.r16[HL]));
+        }
+
+        if (inc) {
+            this.r16[HL]++;
+        } else {
+            this.r16[HL]--;
+        }
+        
+        this.r8[B]--;
+
+        // Reset N flag if incrementing else set flag§
+        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+
+        // Set Zero if B is zero
+        if (this.r8[B] == 0) { this.r8[F] != Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
     }
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
