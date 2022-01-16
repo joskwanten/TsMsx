@@ -187,7 +187,8 @@ function generateLDOpcode(r, dst, src, opcode) {
     let instr = r.Instruction.replace(/r/, src)
         .replace(/o/, '${o.toString(16)}')
         .replace(/,nn/, ',${val.toString(16)}')
-        .replace(/,\(nn\)/, ',(${val.toString(16)})')
+        .replace(/\(nn\),/, '(${nn.toString(16)}),')
+        .replace(/,\(nn\)/, ',(${nn.toString(16)})')
         .replace(/\(n\)/, '(${n.toString(16)})')
         .replace(/,n/, ',${val.toString(16)}');
 
@@ -227,20 +228,20 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
     let add = r.Instruction.indexOf('ADD ') >= 0;
     let cp = r.Instruction.indexOf('CP ') >= 0;
     let carry = sbc || adc;
-    let adding = add || adc;
+    let sub = !(add || adc);
 
     let store = cp ? '' : `${registersLD[dst].direct} = `
     if (registersLD[src].type == 16) {
-        emitCode(`${store}this.addSub16(${registersLD[dst].direct}, val, ${adding}, ${carry})`);
+        emitCode(`${store}this.addSub16(${registersLD[dst].direct}, val, ${sub}, ${carry})`);
     } else {
-        emitCode(`${store}this.addSub8(${registersLD[dst].direct}, val, ${adding}, ${carry})`);
+        emitCode(`${store}this.addSub8(${registersLD[dst].direct}, val, ${sub}, ${carry})`);
     }
 
     let instr = r.Instruction.replace(/r/, src)
-        .replace(/o/, '${o}')
-        .replace(/,nn/, ',${val}')
-        .replace(/,\(nn\)/, ',(${val})')
-        .replace(/,n/, ',${val}');
+        .replace(/o/, '${o.toString(16)}')
+        .replace(/,nn/, ',${val.toString(16)}')
+        .replace(/,\(nn\)/, ',(${nn.toString(16)})')
+        .replace(/n$/, '${val.toString(16)}');
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
@@ -689,6 +690,15 @@ function generateDAAOpcode(r, opcode) {
     emitCode(`});\n`);
 }
 
+function generateCPLOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = ~this.r8[A];`);
+    emitCode(`this.r8[F] |= (Flags.H | Flags.N);`)
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`CPL\`);`);
+    emitCode(`});\n`);
+}
+
 function fillRInOpcode(opcode, r) {
     let regex = /(?<base>\w+)\+r/
     return opcode.map(o => {
@@ -1108,6 +1118,9 @@ function generateGeneral(row) {
         case 'DAA':
             generateDAAOpcode(row, opcode);
             return true;
+        case 'CPL':
+            generateCPLOpcode(row, opcode);
+            return true;
         default:
             return false;
     }
@@ -1157,6 +1170,7 @@ async function generateCode() {
                     else if (r.Instruction.indexOf('O') == 0) { generateLdCpInOut(r); } // OUTI OUTD OTIR and OTID still remaining
                     else if (r.Instruction.indexOf('DJNZ') == 0) { generateDJNZ(r); }
                     else if (r.Instruction.indexOf('LD') == 0) { generateLdCpInOut(r); } // LDI, LDD, LDIR and LDDR
+                    else if (r.Instruction.indexOf('CPL') == 0) { generateGeneral(r); }
                     else if (r.Instruction.indexOf('CP') == 0) { generateLdCpInOut(r); } // CPI, CPD, CPIR and CPDR                    
                     else {
                         if (!generateGeneral(r)) {
