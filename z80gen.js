@@ -411,7 +411,7 @@ function generateRstOpcode(r, operand, opcode) {
     emitCode(`});\n`);
 }
 
-function generateLdCpInOutOpcode(r, opcode) {
+function generateInOutOpcode(r, opcode) {
 
     let instr = r.Instruction;
     let timings = r.TimingZ80.split('/');
@@ -427,6 +427,62 @@ function generateLdCpInOutOpcode(r, opcode) {
     }
 
     emitCode(`this.ini_inid_outi_outd(${inop}, ${inc});`);
+    emitCode(`this.cycles += ${timings[0]};`);
+
+    if (repeat) { 
+        emitCode(`}`);
+        emitCode(`} else {`);
+        emitCode(`this.cycles += ${timings[1]};`);
+        emitCode(`}`)
+    }
+
+    emitLog(`this.log(addr, \`${instr}\`);`);
+    emitCode(`});\n`);
+}
+
+function generateLdiLddLdirLddrOpcode(r, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80.split('/');    
+    let inc = instr.indexOf('LDI') == 0;
+    let repeat = instr.indexOf('R') >= 0;
+
+    generateLambda(r, opcode);
+
+    if (repeat) { 
+        emitCode(`if(this.r16[BC] > 0) {`);
+        emitCode(`while(this.r16[BC] > 0) {`);
+    }
+
+    emitCode(`this.ldi_ldd(${inc});`);
+    emitCode(`this.cycles += ${timings[0]};`);
+
+    if (repeat) { 
+        emitCode(`}`);
+        emitCode(`} else {`);
+        emitCode(`this.cycles += ${timings[1]};`);
+        emitCode(`}`)
+    }
+
+    emitLog(`this.log(addr, \`${instr}\`);`);
+    emitCode(`});\n`);
+}
+
+function generateCpiCpdCpirCpdrOpcode(r, opcode) {
+
+    let instr = r.Instruction;
+    let timings = r.TimingZ80.split('/');    
+    let inc = instr.indexOf('CPI') == 0;
+    let repeat = instr.indexOf('R') >= 0;
+
+    generateLambda(r, opcode);
+
+    if (repeat) { 
+        emitCode(`if(this.r16[BC] > 0) {`);
+        emitCode(`while(this.r16[BC] > 0) {`);
+    }
+
+    emitCode(`this.cpi_cpd(${inc});`);
     emitCode(`this.cycles += ${timings[0]};`);
 
     if (repeat) { 
@@ -505,6 +561,38 @@ function generateDJNZOpcode(r, opcode) {
     emitCode(`this.r16[PC] += this.r8[B] !== 0 ? d : 0;`);
     emitCode(`this.cycles += this.r8[B] !== 0 ? ${timings[0]} : ${timings[1]};`);    
     emitLog(`this.log(addr, \`DJNZ \${d}\`)`);
+    emitCode(`});\n`);
+}
+
+function generateDIOpcode(r, opcode) {    
+    generateLambda(r, opcode);
+    emitCode(`this.disableInterrupts()`);    
+    emitCode(`this.cycles += ${r.TimingZ80}`);    
+    emitLog(`this.log(addr, \`DI\`)`);
+    emitCode(`});\n`);
+}
+
+function generateEIOpcode(r, opcode) {    
+    generateLambda(r, opcode);
+    emitCode(`this.enableInterrupts()`);    
+    emitCode(`this.cycles += ${r.TimingZ80}`);    
+    emitLog(`this.log(addr, \`EI\`)`);
+    emitCode(`});\n`);
+}
+
+function generateNOPOpcode(r, opcode) {    
+    generateLambda(r, opcode);
+    emitComment('Nothing to do');
+    emitCode(`this.cycles += ${r.TimingZ80}`);    
+    emitLog(`this.log(addr, \`NOP\`)`);
+    emitCode(`});\n`);
+}
+
+function generateHaltOpcode(r, opcode) {    
+    generateLambda(r, opcode);
+    emitCode(`this.halt()`);    
+    emitCode(`this.cycles += ${r.TimingZ80}`);    
+    emitLog(`this.log(addr, \`HALT\`)`);
     emitCode(`});\n`);
 }
 
@@ -853,8 +941,14 @@ function generateLdCpInOut(row) {
         throw new Error('No match for ' + JSON.stringify(row));
     }
 
-    let opcode = row.Opcode.trim().split(' ');    
-    generateLdCpInOutOpcode(row, opcode);
+    let opcode = row.Opcode.trim().split(' '); 
+    if (row.Instruction.indexOf('LD') == 0) {
+        generateLdiLddLdirLddrOpcode(row, opcode);
+    }  else if (row.Instruction.indexOf('CP') == 0) { 
+        generateCpiCpdCpirCpdrOpcode(row, opcode);
+    } else {
+        generateInOutOpcode(row, opcode);
+    }
 }
 
 function generateDJNZ(row) {
@@ -866,6 +960,32 @@ function generateDJNZ(row) {
 
     let opcode = row.Opcode.trim().split(' ');    
     generateDJNZOpcode(row, opcode);
+}
+
+function generateGeneral(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' '); 
+    switch(match.groups['opcode']) {
+        case 'DI':
+            generateDIOpcode(row, opcode);
+            return true;
+        case 'EI': 
+            generateEIOpcode(row, opcode);
+            return true;
+        case 'NOP': 
+            generateNOPOpcode(row, opcode);
+            return true;
+        case 'HALT': 
+            generateHaltOpcode(row, opcode);
+            return true;
+        default:
+            return false;
+    }
 }
 
 async function generateCode() {
@@ -911,8 +1031,12 @@ async function generateCode() {
                     else if (r.Instruction.indexOf('IN') == 0) { generateLdCpInOut(r); }
                     else if (r.Instruction.indexOf('O') == 0) { generateLdCpInOut(r); } // OUTI OUTD OTIR and OTID still remaining
                     else if (r.Instruction.indexOf('DJNZ') == 0) { generateDJNZ(r); }
+                    else if (r.Instruction.indexOf('LD') == 0) { generateLdCpInOut(r); } // LDI, LDD, LDIR and LDDR
+                    else if (r.Instruction.indexOf('CP') == 0) { generateLdCpInOut(r); } // CPI, CPD, CPIR and CPDR                    
                     else {
-                        //console.error('Unhandled: ' + r.Instruction);
+                        if (!generateGeneral(r)) {
+                            console.error('Unhandled: ' + r.Instruction);
+                        }
                     }
                 });
 

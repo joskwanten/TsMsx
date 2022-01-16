@@ -364,13 +364,76 @@ export class Z80 implements CPU {
             this.r16[HL]--;
         }
         
-        this.r8[B]--;
-
-        // Reset N flag if incrementing else set flag§
+        this.r8[B] = this.incDec8(this.r8[B], false);
+        
+        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+    }
 
-        // Set Zero if B is zero
-        if (this.r8[B] == 0) { this.r8[F] != Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+    ldi_ldd(inc: boolean) {
+        
+        this.memory.uwrite8(this.r16[HL], this.memory.uread8(this.r16[DE]));        
+
+        if (inc) {
+            this.r16[HL]++;
+            this.r16[DE]++;
+        } else {
+            this.r16[HL]--;
+            this.r16[DE]--;
+        }
+        
+        this.r16[BC]--;
+
+        // P/V is reset in case of overflow (if BC=0 after calling LDI).        
+        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+
+        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
+        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+    }
+
+    cpi_cpd(inc: boolean) {
+        
+        let val = this.memory.uread8(this.r16[HL]);
+
+        // The carry is preserved, N is set and all the other flags are affected as defined. 
+        // P/V denotes the overflowing of BC, while the Z flag is set if A=(HL) before HL is decreased.
+
+        // Set zero flag in case A = (HL)
+        if (this.r8[A] == val) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z };
+
+        if (inc) {
+            this.r16[HL]++;
+            this.r16[DE]++;
+        } else {
+            this.r16[HL]--;
+            this.r16[DE]--;
+        }
+        
+        this.r16[BC]--;
+
+        // P/V is reset in case of overflow (if BC=0 after calling LDI).        
+        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+
+        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
+        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+    }
+
+    disableInterrupts() {
+        // TODO: 
+        // this.iff1 = false;
+        // this.iff2 = false
+        this.interruptEnabled = false;
+    }
+
+    enableInterrupts() {
+        // TODO: 
+        // this.iff1 = false;
+        // this.iff2 = false
+        this.interruptEnabled = true;
+    }
+
+    halt() {        
+        this.halted = true;
     }
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
@@ -405,9 +468,7 @@ export class Z80 implements CPU {
         }
         this.addOpcodes();
     }
-    halt(): void {
-        throw new Error('Method not implemented.');
-    }
+    
     interrupt(): void {
         throw new Error('Method not implemented.');
     }
