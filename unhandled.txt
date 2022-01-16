@@ -6,7 +6,6 @@ Unhandled: CPIR
 Unhandled: CPL
 Unhandled: DAA
 Unhandled: DI
-Unhandled: DJNZ o
 Unhandled: EI
 Unhandled: HALT
 Unhandled: IM 0

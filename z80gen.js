@@ -466,6 +466,7 @@ function generateIncDecOpcode(r, src, opcode, inc) {
         emitCode(registersLD[src].dst)
     }
 
+    emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
     emitCode(`});\n`);
 }
@@ -490,6 +491,20 @@ function generateAndOrXorOpcode(r, src, opcode, operation) {
         emitLog(`this.log(addr, \`${operation} ${src}\`)`);
     }
 
+    emitCode(`});\n`);
+}
+
+
+function generateDJNZOpcode(r, opcode) {
+
+    let timings = r.TimingZ80.split('/');
+
+    generateLambda(r, opcode);
+    emitCode(`let d = this.memory.read8(this.r16[PC]++)`);
+    emitCode(`this.r8[B]--;`);
+    emitCode(`this.r16[PC] += this.r8[B] !== 0 ? d : 0;`);
+    emitCode(`this.cycles += this.r8[B] !== 0 ? ${timings[0]} : ${timings[1]};`);    
+    emitLog(`this.log(addr, \`DJNZ \${d}\`)`);
     emitCode(`});\n`);
 }
 
@@ -842,6 +857,17 @@ function generateLdCpInOut(row) {
     generateLdCpInOutOpcode(row, opcode);
 }
 
+function generateDJNZ(row) {
+    //console.log(r);
+    let match = mnemonic.exec(row.Instruction);
+    if (!match) {
+        throw new Error('No match for ' + JSON.stringify(row));
+    }
+
+    let opcode = row.Opcode.trim().split(' ');    
+    generateDJNZOpcode(row, opcode);
+}
+
 async function generateCode() {
     await new Promise((res, rej) => {
         fs.createReadStream('Opcodes.csv')
@@ -883,7 +909,8 @@ async function generateCode() {
                     else if (r.Instruction.indexOf('EX') == 0) { generateEx(r); }
                     else if (r.Instruction.indexOf('RST') == 0) { generateRst(r); }
                     else if (r.Instruction.indexOf('IN') == 0) { generateLdCpInOut(r); }
-                    else if (r.Instruction.indexOf('O') == 0) { generateLdCpInOut(r); }
+                    else if (r.Instruction.indexOf('O') == 0) { generateLdCpInOut(r); } // OUTI OUTD OTIR and OTID still remaining
+                    else if (r.Instruction.indexOf('DJNZ') == 0) { generateDJNZ(r); }
                     else {
                         //console.error('Unhandled: ' + r.Instruction);
                     }
