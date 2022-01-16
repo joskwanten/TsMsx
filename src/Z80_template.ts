@@ -88,6 +88,7 @@ export class Z80 implements CPU {
     opcodesDDCB: ((addr: number, o: number) => void)[] = [];
     opcodesFDCB: ((addr: number, o: number) => void)[] = [];
     evenParity: boolean[] = [];
+    logging = false;
 
     addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
         // If carry has to be taken into account add one to the second operand
@@ -327,7 +328,7 @@ export class Z80 implements CPU {
         this.r8[A] = val >> 8;
         this.memory.uwrite8(this.r16[HL], val);
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
-        this.r8[F] &= ~(Flags.H |  Flags.N);
+        this.r8[F] &= ~(Flags.H | Flags.N);
         if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
         if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
         if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
@@ -336,12 +337,12 @@ export class Z80 implements CPU {
     rotateRRD() {
         // Like rld, except rotation is rightward.
         let val = this.memory.read8(this.r16[HL]);
-        let a  = this.r8[A] & 0xf;
+        let a = this.r8[A] & 0xf;
         this.r8[A] = val & 0xf;
-        val =  a << 4 + val >> 4;
+        val = a << 4 + val >> 4;
         this.memory.uwrite8(this.r16[HL], val);
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
-        this.r8[F] &= ~(Flags.H |  Flags.N);
+        this.r8[F] &= ~(Flags.H | Flags.N);
         if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
         if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
         if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
@@ -489,7 +490,7 @@ export class Z80 implements CPU {
         this.r8[A] = (ah << 4) + (al & 0xf);
         // If the second addition was needed, the C flag is set after execution, otherwise it is reset. 
         // The N flag is preserved, P/V is parity and the others are altered by definition.
-        if (c) { this.r8[F] != Flags.C; } else { this.r8[F] &= ~Flags.C; } 
+        if (c) { this.r8[F] != Flags.C; } else { this.r8[F] &= ~Flags.C; }
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
@@ -539,10 +540,12 @@ export class Z80 implements CPU {
     }
 
     private log(address: number, msg: string): void {
-        this.logger.debug(
-            ("000" + address.toString(16)).slice(-4) + " : " + msg,
-            this.dumpRegisters()
-        );
+        if (this.logging) {
+            this.logger.debug(
+                ("000" + address.toString(16)).slice(-4) + " : " + msg,
+                this.dumpRegisters()
+            );
+        }
 
     }
 
@@ -565,10 +568,39 @@ export class Z80 implements CPU {
         this.r16[SP] = 0;
     }
 
+    executeSingleInstruction() {
+        if (this.halted) {
+            return;
+        }
+
+        if (!this.r16[PC]) {
+            console.log("DEVICE (RE)STARTED");
+        }
+
+        let addr = this.r16[PC]++;
+        let opcode = this.memory.uread8(addr);
+
+        this.opcodes[opcode](addr);
+    }
 
     execute(numOfInstructions: number, showLog: boolean) {
+        this.logging = showLog;
+        for (let i = 0; i < numOfInstructions; i++) {
 
+            this.executeSingleInstruction();
+        }
     }
+
+    executeUntil(breakPoint: number) {
+        this.logging = false;
+        while (1) {
+            this.executeSingleInstruction();
+            if (this.r16[PC] == breakPoint) {
+                return;
+            }
+        }
+    }
+
 
     addInstructionCB(opcode: number, func: (addr: number) => void) {
         this.opcodesCB[opcode] = func;

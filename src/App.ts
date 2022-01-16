@@ -3,7 +3,7 @@ import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger, Registers } from './Logger';
-import { Z80 } from './Z80';
+import { Z80 } from './z80_generated';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';

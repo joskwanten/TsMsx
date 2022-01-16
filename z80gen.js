@@ -121,7 +121,7 @@ const registersLD = {
     '(IY+o)': { type: 8, src: 'let val = this.memory.uread8(this.r16[IY] + o)', dst: 'this.memory.uwrite8(this.r16[IY] + o, val);' },
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
-    '(n)': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: 'this.IO.write8(n, val);' },
+    '(n)': { type: 8, src: 'let n = this.memory.uread8(this.r16[PC]++);', dst: 'this.IO.write8(n, val);' },
     '(nn)': { type: 8, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
 
@@ -171,6 +171,9 @@ function generateLDOpcode(r, dst, src, opcode) {
         emitCode(`${registersLD[dst].direct} = ${registersLD[src].direct}`);
     } else {
         emitCode(registersLD[src].src);
+        if (src == '(n)') {
+            emitCode('let val = this.IO.read8(n);');
+        }
         if (dst == '(n)') {
             emitCode(n_fetch);
         }
@@ -182,10 +185,11 @@ function generateLDOpcode(r, dst, src, opcode) {
     }
 
     let instr = r.Instruction.replace(/r/, src)
-        .replace(/o/, '${o}')
-        .replace(/,nn/, ',${val}')
-        .replace(/,\(nn\)/, ',(${val})')
-        .replace(/,n/, ',${val}');
+        .replace(/o/, '${o.toString(16)}')
+        .replace(/,nn/, ',${val.toString(16)}')
+        .replace(/,\(nn\)/, ',(${val.toString(16)})')
+        .replace(/\(n\)/, '(${n.toString(16)})')
+        .replace(/,n/, ',${val.toString(16)}');
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
@@ -279,8 +283,8 @@ function generateJPOpcode(r, condition, src, opcode) {
     emitCode(registersLD[src].src);
 
     let instr = r.Instruction.replace(/r/, src)
-        .replace(/o/, '${o}')
-        .replace(/nn/, '${val}');
+        .replace(/o/, '${o.toString(16)}')
+        .replace(/nn/, '${val.toString(16)}');
 
     if (condition) {
         emitCode(`if (${conditions[condition]}) {`);;
@@ -297,8 +301,8 @@ function generateJPOpcode(r, condition, src, opcode) {
 function generateJRAndCallOpcode(r, condition, src, opcode) {
 
     let instr = r.Instruction.replace(/r/, src)
-        .replace(/o/, '${o}')
-        .replace(/nn/, '${nn}');
+        .replace(/o/, '${o.toString(16)}')
+        .replace(/nn/, '${nn.toString(16)}');
 
     let timings = r.TimingZ80.split('/');
 
@@ -528,11 +532,6 @@ function generateIncDecOpcode(r, src, opcode, inc) {
 }
 
 function generateAndOrXorOpcode(r, src, opcode, operation) {
-
-    let instr = r.Instruction.replace(/r/, src)
-        .replace(/o/, '${o}')
-        .replace(/nn/, '${nn}');
-
     generateLambda(r, opcode);
 
     let val = 'val';
@@ -541,7 +540,7 @@ function generateAndOrXorOpcode(r, src, opcode, operation) {
     emitCode(`this.logicalOperation(${val}, LogicalOperation.${operation});`);
 
     if (src === 'n') {
-        emitLog(`this.log(addr, \`${operation} \${val}\`);`);
+        emitLog(`this.log(addr, \`${operation} \${val.toString(16)}\`);`);
     } else {
         src = src.replace(/\+o/, '+${o}');
         emitLog(`this.log(addr, \`${operation} ${src}\`);`);
