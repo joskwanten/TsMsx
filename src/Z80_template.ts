@@ -210,7 +210,7 @@ export class Z80 implements CPU {
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
-    shiftRotateFlags(result: number) {
+    shiftRotateFlags(result: number, PVFlag: boolean) {
         // Reset H and N flags
         this.r8[F] &= ~Flags.H;
         this.r8[F] &= ~Flags.N;
@@ -222,18 +222,20 @@ export class Z80 implements CPU {
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
 
         // Set parity if even
-        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        if (PVFlag) {
+            if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        }
     }
 
 
-    rotateLeft(value: number): number {
+    rotateLeft(value: number, PVFlag = true): number {
         let result = (value << 1) + (this.r8[F] & Flags.C) ? 1 : 0;
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, PVFlag);
         return result;
     }
 
-    rotateLeftCarry(value: number): number {
+    rotateLeftCarry(value: number, PVFlag = true): number {
         let result = (value << 1);
         // If we have a carry set bit 0 and the carry flag
         if (result & 0x100) {
@@ -242,11 +244,11 @@ export class Z80 implements CPU {
         } else {
             this.r8[F] &= ~Flags.C
         }
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, PVFlag);
         return result;
     }
 
-    rotateRight(value: number): number {
+    rotateRight(value: number, PVFlag = true): number {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
 
@@ -257,11 +259,11 @@ export class Z80 implements CPU {
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, PVFlag);
         return result;
     }
 
-    rotateRightCarry(value: number): number {
+    rotateRightCarry(value: number, PVFlag = true): number {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
         // Do shifting and add bit0 as bit 7 (0x80)
@@ -271,7 +273,7 @@ export class Z80 implements CPU {
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, PVFlag);
         return result;
     }
 
@@ -283,7 +285,7 @@ export class Z80 implements CPU {
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, true);
         return result;
     }
 
@@ -295,7 +297,7 @@ export class Z80 implements CPU {
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, true);
         return result;
     }
 
@@ -310,8 +312,39 @@ export class Z80 implements CPU {
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result);
+        this.shiftRotateFlags(result, true);
         return result;
+    }
+
+    interruptMode(value: number) {
+        // TODO: Msx uses Mode 0 so we don't bother right now
+    }
+
+    rotateRLD() {
+        // Performs a 4-bit leftward rotation of the 12-bit number whose 4 most signigifcant 
+        // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
+        let val = (this.memory.read8(this.r16[HL]) << 4) | (this.r8[A] & 0xf);
+        this.r8[A] = val >> 8;
+        this.memory.uwrite8(this.r16[HL], val);
+        // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
+        this.r8[F] &= ~(Flags.H |  Flags.N);
+        if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
+    }
+
+    rotateRRD() {
+        // Like rld, except rotation is rightward.
+        let val = this.memory.read8(this.r16[HL]);
+        let a  = this.r8[A] & 0xf;
+        this.r8[A] = val & 0xf;
+        val =  a << 4 + val >> 4;
+        this.memory.uwrite8(this.r16[HL], val);
+        // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
+        this.r8[F] &= ~(Flags.H |  Flags.N);
+        if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
     }
 
     generateEvenParityTable() {
@@ -363,16 +396,16 @@ export class Z80 implements CPU {
         } else {
             this.r16[HL]--;
         }
-        
+
         this.r8[B] = this.incDec8(this.r8[B], false);
-        
+
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
     }
 
     ldi_ldd(inc: boolean) {
-        
-        this.memory.uwrite8(this.r16[HL], this.memory.uread8(this.r16[DE]));        
+
+        this.memory.uwrite8(this.r16[HL], this.memory.uread8(this.r16[DE]));
 
         if (inc) {
             this.r16[HL]++;
@@ -381,7 +414,7 @@ export class Z80 implements CPU {
             this.r16[HL]--;
             this.r16[DE]--;
         }
-        
+
         this.r16[BC]--;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
@@ -392,7 +425,7 @@ export class Z80 implements CPU {
     }
 
     cpi_cpd(inc: boolean) {
-        
+
         let val = this.memory.uread8(this.r16[HL]);
 
         // The carry is preserved, N is set and all the other flags are affected as defined. 
@@ -408,7 +441,7 @@ export class Z80 implements CPU {
             this.r16[HL]--;
             this.r16[DE]--;
         }
-        
+
         this.r16[BC]--;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
@@ -432,8 +465,32 @@ export class Z80 implements CPU {
         this.interruptEnabled = true;
     }
 
-    halt() {        
+    halt() {
         this.halted = true;
+    }
+
+    daa() {
+        // When this instruction is executed, the A register is BCD corrected using the contents
+        // of the flags. The exact process is the following: if the least significant four bits 
+        // of A contain a non-BCD digit (i. e. it is greater than 9) or the H flag is set, then $06 
+        // is added to the register. Then the four most significant bits are checked. If this more 
+        // significant digit also happens to be greater than 9 or the C flag is set, then $60 is added.
+        let al = this.r8[A];
+        let ah = this.r8[A] >> 4;
+        let c = false;
+        if (al > 9) {
+            al += 6;
+        }
+        if (ah > 9) {
+            ah += 6;
+            c = true;
+        }
+
+        this.r8[A] = (ah << 4) + (al & 0xf);
+        // If the second addition was needed, the C flag is set after execution, otherwise it is reset. 
+        // The N flag is preserved, P/V is parity and the others are altered by definition.
+        if (c) { this.r8[F] != Flags.C; } else { this.r8[F] &= ~Flags.C; } 
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
     constructor(private memory: Memory, private IO: IO, private logger: Logger) {
@@ -468,7 +525,7 @@ export class Z80 implements CPU {
         }
         this.addOpcodes();
     }
-    
+
     interrupt(): void {
         throw new Error('Method not implemented.');
     }

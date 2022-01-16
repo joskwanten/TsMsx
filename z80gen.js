@@ -344,7 +344,7 @@ function generateRetOpcode(r, condition, opcode) {
     if (condition) { emitCode(`} else {`); }
     if (condition) { emitCode(`this.cycles += ${timings[1]};`); }
     if (condition) { emitCode(`}`); }
-    emitLog(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
 }
 
@@ -400,12 +400,12 @@ function generateRstOpcode(r, operand, opcode) {
     let timings = r.TimingZ80;
     generateLambda(r, opcode);
 
-    
+
 
     emitCode(`this.r16[SP] -= 2;
     this.memory.uwrite16(this.r16[SP], this.r16[PC]);
     this.r16[PC] = 0x${operand.replace(/H/, '')};`)
-            
+
     emitCode(`this.cycles += ${timings};`);
     emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
@@ -421,7 +421,7 @@ function generateInOutOpcode(r, opcode) {
 
     generateLambda(r, opcode);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`if(this.r8[B] > 0) {`);
         emitCode(`while(this.r8[B] > 0) {`);
     }
@@ -429,7 +429,7 @@ function generateInOutOpcode(r, opcode) {
     emitCode(`this.ini_inid_outi_outd(${inop}, ${inc});`);
     emitCode(`this.cycles += ${timings[0]};`);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`}`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
@@ -443,13 +443,13 @@ function generateInOutOpcode(r, opcode) {
 function generateLdiLddLdirLddrOpcode(r, opcode) {
 
     let instr = r.Instruction;
-    let timings = r.TimingZ80.split('/');    
+    let timings = r.TimingZ80.split('/');
     let inc = instr.indexOf('LDI') == 0;
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`if(this.r16[BC] > 0) {`);
         emitCode(`while(this.r16[BC] > 0) {`);
     }
@@ -457,7 +457,7 @@ function generateLdiLddLdirLddrOpcode(r, opcode) {
     emitCode(`this.ldi_ldd(${inc});`);
     emitCode(`this.cycles += ${timings[0]};`);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`}`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
@@ -471,13 +471,13 @@ function generateLdiLddLdirLddrOpcode(r, opcode) {
 function generateCpiCpdCpirCpdrOpcode(r, opcode) {
 
     let instr = r.Instruction;
-    let timings = r.TimingZ80.split('/');    
+    let timings = r.TimingZ80.split('/');
     let inc = instr.indexOf('CPI') == 0;
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`if(this.r16[BC] > 0) {`);
         emitCode(`while(this.r16[BC] > 0) {`);
     }
@@ -485,7 +485,7 @@ function generateCpiCpdCpirCpdrOpcode(r, opcode) {
     emitCode(`this.cpi_cpd(${inc});`);
     emitCode(`this.cycles += ${timings[0]};`);
 
-    if (repeat) { 
+    if (repeat) {
         emitCode(`}`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
@@ -514,16 +514,16 @@ function generateIncDecOpcode(r, src, opcode, inc) {
             emitCode(`${val} = this.incDec8(${val}, ${inc});`);
         } else {
             if (inc) {
-                emitCode(`${val}++`);
+                emitCode(`${val}++;`);
             } else {
-                emitCode(`${val}--`);
+                emitCode(`${val}--;`);
             }
         }
         emitCode(registersLD[src].dst)
     }
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitLog(`this.log(addr, \`${instr}\`)`);
+    emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
 }
 
@@ -541,10 +541,10 @@ function generateAndOrXorOpcode(r, src, opcode, operation) {
     emitCode(`this.logicalOperation(${val}, LogicalOperation.${operation});`);
 
     if (src === 'n') {
-        emitLog(`this.log(addr, \`${operation} \${val}\`)`);
+        emitLog(`this.log(addr, \`${operation} \${val}\`);`);
     } else {
         src = src.replace(/\+o/, '+${o}');
-        emitLog(`this.log(addr, \`${operation} ${src}\`)`);
+        emitLog(`this.log(addr, \`${operation} ${src}\`);`);
     }
 
     emitCode(`});\n`);
@@ -559,43 +559,136 @@ function generateDJNZOpcode(r, opcode) {
     emitCode(`let d = this.memory.read8(this.r16[PC]++)`);
     emitCode(`this.r8[B]--;`);
     emitCode(`this.r16[PC] += this.r8[B] !== 0 ? d : 0;`);
-    emitCode(`this.cycles += this.r8[B] !== 0 ? ${timings[0]} : ${timings[1]};`);    
-    emitLog(`this.log(addr, \`DJNZ \${d}\`)`);
+    emitCode(`this.cycles += this.r8[B] !== 0 ? ${timings[0]} : ${timings[1]};`);
+    emitLog(`this.log(addr, \`DJNZ \${d}\`);`);
     emitCode(`});\n`);
 }
 
-function generateDIOpcode(r, opcode) {    
+function generateDIOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitCode(`this.disableInterrupts()`);    
-    emitCode(`this.cycles += ${r.TimingZ80}`);    
-    emitLog(`this.log(addr, \`DI\`)`);
+    emitCode(`this.disableInterrupts();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`DI\`);`);
     emitCode(`});\n`);
 }
 
-function generateEIOpcode(r, opcode) {    
+function generateEIOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitCode(`this.enableInterrupts()`);    
-    emitCode(`this.cycles += ${r.TimingZ80}`);    
-    emitLog(`this.log(addr, \`EI\`)`);
+    emitCode(`this.enableInterrupts();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`EI\`);`);
     emitCode(`});\n`);
 }
 
-function generateNOPOpcode(r, opcode) {    
+function generateNOPOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitComment('Nothing to do');
-    emitCode(`this.cycles += ${r.TimingZ80}`);    
-    emitLog(`this.log(addr, \`NOP\`)`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`NOP\`);`);
     emitCode(`});\n`);
 }
 
-function generateHaltOpcode(r, opcode) {    
+function generateHaltOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitCode(`this.halt()`);    
-    emitCode(`this.cycles += ${r.TimingZ80}`);    
-    emitLog(`this.log(addr, \`HALT\`)`);
+    emitCode(`this.halt();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`HALT\`);`);
     emitCode(`});\n`);
 }
 
+function generateCCFOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitComment('Carry flag inverted. Also inverts H and clears N. Rest of the flags are preserved.');
+    emitCode(`if (this.r8[F] & Flags.C) { this.r8[F] &= ~Flags.C; } else { this.r8[F] |= Flags.C };`);
+    emitCode(`if (this.r8[F] & Flags.H) { this.r8[F] &= ~Flags.H; } else { this.r8[F] |= Flags.H };`);
+    emitCode(`this.r8[F] &= ~Flags.N;`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`CCF\`);`);
+    emitCode(`});\n`);
+}
+
+function generateSCFOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitComment('Carry flag set, H and N cleared, rest are preserved.');
+    emitCode(`this.r8[F] |= Flags.C;`);
+    emitCode(`this.r8[F] &= ~Flags.H;`);
+    emitCode(`this.r8[F] &= ~Flags.N;`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`SCF\`);`);
+    emitCode(`});\n`);
+}
+
+function generateNegOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = this.addSub8(0, this.r8[A], true, false);`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`NEG\`);`);
+    emitCode(`});\n`);
+}
+
+function generateRLAOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = this.rotateLeft(this.r8[A], true);`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RLA\`);`);
+    emitCode(`});\n`);
+}
+
+function generateRLCAOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = this.rotateLeftCarry(this.r8[A], true);`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RLCA\`);`);
+    emitCode(`});\n`);
+}
+
+function generateRRAOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = this.rotateRight(this.r8[A], true);`);
+    emitCode(`this.cycles += ${r.TimingZ80}`);
+    emitLog(`this.log(addr, \`RRA\`)`);
+    emitCode(`});\n`);
+}
+
+function generateRRCAOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.r8[A] = this.rotateRightCarry(this.r8[A], true);`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RRCA\`);`);
+    emitCode(`});\n`);
+}
+
+function generateIMOpcode(r, opcode, operand) {
+    generateLambda(r, opcode);
+    emitCode(`this.interruptMode(${operand});`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`IM ${operand}\`);`);
+    emitCode(`});\n`);
+}
+
+function generateRLDOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.rotateRLD();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RLD\`);`);
+    emitCode(`});\n`);
+}
+
+
+function generateRRDOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.rotateRRD();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RRD\`);`);
+    emitCode(`});\n`);
+}
+
+function generateDAAOpcode(r, opcode) {
+    generateLambda(r, opcode);
+    emitCode(`this.daa();`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`DAA\`);`);
+    emitCode(`});\n`);
+}
 
 function fillRInOpcode(opcode, r) {
     let regex = /(?<base>\w+)\+r/
@@ -941,10 +1034,10 @@ function generateLdCpInOut(row) {
         throw new Error('No match for ' + JSON.stringify(row));
     }
 
-    let opcode = row.Opcode.trim().split(' '); 
+    let opcode = row.Opcode.trim().split(' ');
     if (row.Instruction.indexOf('LD') == 0) {
         generateLdiLddLdirLddrOpcode(row, opcode);
-    }  else if (row.Instruction.indexOf('CP') == 0) { 
+    } else if (row.Instruction.indexOf('CP') == 0) {
         generateCpiCpdCpirCpdrOpcode(row, opcode);
     } else {
         generateInOutOpcode(row, opcode);
@@ -958,7 +1051,7 @@ function generateDJNZ(row) {
         throw new Error('No match for ' + JSON.stringify(row));
     }
 
-    let opcode = row.Opcode.trim().split(' ');    
+    let opcode = row.Opcode.trim().split(' ');
     generateDJNZOpcode(row, opcode);
 }
 
@@ -969,19 +1062,52 @@ function generateGeneral(row) {
         throw new Error('No match for ' + JSON.stringify(row));
     }
 
-    let opcode = row.Opcode.trim().split(' '); 
-    switch(match.groups['opcode']) {
+    let opcode = row.Opcode.trim().split(' ');
+    switch (match.groups['opcode']) {
         case 'DI':
             generateDIOpcode(row, opcode);
             return true;
-        case 'EI': 
+        case 'EI':
             generateEIOpcode(row, opcode);
             return true;
-        case 'NOP': 
+        case 'NOP':
             generateNOPOpcode(row, opcode);
             return true;
-        case 'HALT': 
+        case 'HALT':
             generateHaltOpcode(row, opcode);
+            return true;
+        case 'CCF':
+            generateCCFOpcode(row, opcode);
+            return true;
+        case 'SCF':
+            generateSCFOpcode(row, opcode);
+            return true;
+        case 'NEG':
+            generateNegOpcode(row, opcode);
+            return true;
+        case 'RLA':
+            generateRLAOpcode(row, opcode);
+            return true;
+        case 'RLCA':
+            generateRLCAOpcode(row, opcode);
+            return true;
+        case 'RRA':
+            generateRRAOpcode(row, opcode);
+            return true;
+        case 'RRCA':
+            generateRRCAOpcode(row, opcode);
+            return true;
+        case 'IM':
+            generateIMOpcode(row, opcode, match.groups['operand']);
+            return true;
+        case 'RLD':
+            generateRLDOpcode(row, opcode);
+            return true;
+        case 'RRD':
+            generateRRDOpcode(row, opcode);
+            return true;
+        case 'DAA':
+            generateDAAOpcode(row, opcode);
             return true;
         default:
             return false;
@@ -996,7 +1122,7 @@ async function generateCode() {
             .on('end', () => {
                 results.forEach(r => {
                     if (r.Instruction.indexOf('LD ') == 0) { generateLD(r); }
-                    else if (r.Instruction.indexOf('JP ') == 0) { generateJPJR(r); } 
+                    else if (r.Instruction.indexOf('JP ') == 0) { generateJPJR(r); }
                     else if (r.Instruction.indexOf('JR ') == 0) { generateJPJR(r); }
                     else if (r.Instruction.indexOf('CALL ') == 0) { generateJPJR(r); }
                     else if (r.Instruction.indexOf('INC ') == 0) { generateIncDec(r, true); }
