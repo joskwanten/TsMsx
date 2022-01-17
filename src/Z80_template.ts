@@ -401,7 +401,7 @@ export class Z80 implements CPU {
 
     ldi_ldd(inc: boolean) {
 
-        this.memory.uwrite8(this.r16[HL], this.memory.uread8(this.r16[DE]));
+        this.memory.uwrite8(this.r16[DE], this.memory.uread8(this.r16[HL]));
 
         if (inc) {
             this.r16[HL]++;

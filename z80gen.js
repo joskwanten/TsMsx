@@ -322,14 +322,23 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
 
     if (condition) {
         emitCode(`if (${conditions[condition]}) {`);;
-        if (call) emitCode(stack_pc); // Call puts program counter on the stack
-        emitCode(`this.r16[PC] += ${varName};`)
+        if (call) {
+            emitCode(stack_pc); // Call puts program counter on the stack
+            emitCode(`this.r16[PC] = ${varName};`);
+        } else {
+            emitCode(`this.r16[PC] += ${varName};`); 
+        }
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`);
     } else {
-        emitCode(`this.r16[PC] += ${varName};`);
+        if (call) {
+            emitCode(stack_pc); // Call puts program counter on the stack
+            emitCode(`this.r16[PC] = ${varName};`);
+        } else {
+            emitCode(`this.r16[PC] += ${varName};`); 
+        }
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
 
