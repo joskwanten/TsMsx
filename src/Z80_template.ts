@@ -5,33 +5,33 @@ import { IO } from "./IO";
 import { Memory } from "./Memory";
 import { throws } from 'assert';
 
-const A = 1;
-const F = 0;
-const B = 3;
-const C = 2;
-const D = 5;
-const E = 4;
-const H = 7;
-const L = 6;
-const I = 16;
-const R = 17;
-const IXh = 9;
-const IXl = 8;
-const IYh = 11;
-const IYl = 10;
-const r16_debug = ["AF", "BC", "DE", "HL", "IX", "IY", "SP", "PC"];
+export const A = 1;
+export const F = 0;
+export const B = 3;
+export const C = 2;
+export const D = 5;
+export const E = 4;
+export const H = 7;
+export const L = 6;
+export const I = 16;
+export const R = 17;
+export const IXh = 9;
+export const IXl = 8;
+export const IYh = 11;
+export const IYl = 10;
+export const r16_debug = ["AF", "BC", "DE", "HL", "IX", "IY", "SP", "PC"];
 
-const AF = 0;
-const BC = 1;
-const DE = 2;
-const HL = 3;
-const IX = 4;
-const IY = 5;
-const SP = 6;
-const _I = 7;
-const _R = 8;
-const PC = 9;
-const _F = 10;
+export const AF = 0;
+export const BC = 1;
+export const DE = 2;
+export const HL = 3;
+export const IX = 4;
+export const IY = 5;
+export const SP = 6;
+export const _I = 7;
+export const _R = 8;
+export const PC = 9;
+export const _F = 10;
 
 enum Flags {
     S = 0b10000000,
@@ -88,6 +88,7 @@ export class Z80 implements CPU {
     opcodesDDCB: ((addr: number, o: number) => void)[] = [];
     opcodesFDCB: ((addr: number, o: number) => void)[] = [];
     evenParity: boolean[] = [];
+    systemCalls: ((cpu: Z80) => void)[] = [];
     logging = false;
 
     addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
@@ -159,10 +160,13 @@ export class Z80 implements CPU {
         return result;
     }
 
+    registerSystemCall(addr: number, func: (cpu: Z80) => void ) {
+        this.systemCalls[addr] = func;
+    }
+
 
     incDec8(value: number, inc: boolean): number {
-        // Add 1 or in case of decrement the two's complement of one
-        let result = value + (inc ? 0x01 : 0xff);
+        let result = value + (inc ? 1 : -1);
 
         // Reset N flag if it is an increment
         if (!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
@@ -489,13 +493,19 @@ export class Z80 implements CPU {
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
-    constructor(private memory: Memory, private IO: IO, private logger: Logger) {
+    constructor(public memory: Memory, private IO: IO, private logger: Logger) {
         // Generate parity table for fast computation of parity
         this.generateEvenParityTable();
 
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesED[opcode](addr);
+            // try {
+                this.opcodesED[opcode](addr);
+            // } catch(e: any) {
+            //     console.error(e);
+            //     console.error('Address: ' + addr.toString(16));
+            //     console.error('Opcode: ' + opcode);
+            // }
         }
         this.opcodes[0xDD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
@@ -519,7 +529,12 @@ export class Z80 implements CPU {
             let opcode = this.memory.uread8(this.r16[PC]++);
             this.opcodesFDCB[opcode](addr, o);
         }
+
+
         this.addOpcodes();
+
+        
+
     }
 
     interrupt(): void {
@@ -570,6 +585,16 @@ export class Z80 implements CPU {
 
         if (!this.r16[PC]) {
             console.log("DEVICE (RE)STARTED");
+        }
+
+        if (this.systemCalls.length > 0) {
+            let func = this.systemCalls[this.r16[PC]];
+            if (func) {
+                // Callback
+                func(this);
+                // Execute RET instruction
+                this.opcodes[0xC9](this.r16[PC]);
+            }
         }
 
         let addr = this.r16[PC]++;
