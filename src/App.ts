@@ -265,27 +265,27 @@ function step(numOfSteps: number, log = true) {
 }
 
 window.onload = () => {
-    const canvas = <HTMLCanvasElement>document.getElementById('screen');
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx?.createImageData(256, 192);
-    if (imageData) {
-        // Iterate through every pixel
-        for (let i = 0; i < imageData.data.length; i += 4) {
-            // Percentage in the x direction, times 255
-            let x = (i % 1024) / 1024 * 255;
-            // Percentage in the y direction, times 255
-            let y = Math.ceil(i / 1024) / 1024 * 255;
+    // const canvas = <HTMLCanvasElement>document.getElementById('screen');
+    // const ctx = canvas.getContext('2d');
+    // const imageData = ctx?.createImageData(256, 192);
+    // if (imageData) {
+    //     // Iterate through every pixel
+    //     for (let i = 0; i < imageData.data.length; i += 4) {
+    //         // Percentage in the x direction, times 255
+    //         let x = (i % 1024) / 1024 * 255;
+    //         // Percentage in the y direction, times 255
+    //         let y = Math.ceil(i / 1024) / 1024 * 255;
 
-            // Modify pixel data
-            imageData.data[i + 0] = x;        // R value
-            imageData.data[i + 1] = y;        // G value
-            imageData.data[i + 2] = 255 - x;  // B value
-            imageData.data[i + 3] = 255;      // A value
-        }
+    //         // Modify pixel data
+    //         imageData.data[i + 0] = x;        // R value
+    //         imageData.data[i + 1] = y;        // G value
+    //         imageData.data[i + 2] = 255 - x;  // B value
+    //         imageData.data[i + 3] = 255;      // A value
+    //     }
 
-        // Draw image data to the canvas
-        ctx?.putImageData(imageData, 0, 0);
-    }
+    //     // Draw image data to the canvas
+    //     ctx?.putImageData(imageData, 0, 0);
+    // }
 
     document.querySelector('#reset')?.addEventListener('click', () => {
         reset();

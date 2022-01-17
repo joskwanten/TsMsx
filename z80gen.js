@@ -329,7 +329,7 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`);
     } else {
-        emitCode(`this.r16[PC] = ${varName};`);
+        emitCode(`this.r16[PC] += ${varName};`);
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
 

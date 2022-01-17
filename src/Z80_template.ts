@@ -96,13 +96,8 @@ export class Z80 implements CPU {
             value2 += 1;
         }
 
-        if (sub) {
-            // Substraction is the same as an addition except that it
-            // uses the 2's-complement value for the computation
-            value2 = (~(value2 - 1)) & 0xff
-        }
 
-        let result = value1 + value2;
+        let result = sub ?  value1 - value2 : value1 + value2;
 
         // Set / Reset N flag depending if it is an addition or substraction
         if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
