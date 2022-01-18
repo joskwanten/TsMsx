@@ -140,7 +140,7 @@ export class Z80 implements CPU {
         if ((value & 0x0f) > 0) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
         
         // // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -173,7 +173,7 @@ export class Z80 implements CPU {
         if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
 
         // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -198,25 +198,25 @@ export class Z80 implements CPU {
 
 
     incDec8(value: number, inc: boolean): number {
-        let result = value + (inc ? 1 : -1);
+        let result = inc ? value + 1 : value - 1;
 
         // Reset N flag if it is an increment
-        if (!inc) { this.r8[F] |= Flags.N; } else { this.r8[F] &= ~Flags.N; }
+        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N; }
 
         // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result && 0xff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
 
         // Carry is unaffected
 
-        // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ?
-            ((value & 0x80) == 0) && ((result & 0x80) != 0) :
-            ((value & 0x80) == 0x80) && ((result & 0x80) != 0x80);
+        // Half carry
+        let halfcarry = inc ? (value & 0xf) === 0xf : (value & 0xf) === 0;
+        if (halfcarry) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
 
-        // Set carry if bit 9 is set
+        // Overflow, if the sign becomes negative when adding one
+        let overflow = inc ? (value == 0x7f) : (value == 0x80);
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
@@ -303,7 +303,7 @@ export class Z80 implements CPU {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
         // Do shifting and add bit0 as bit 7 (0x80)
-        let result = (value >> 1) + bit0 ? 0x80 : 0;
+        let result = (value >>> 1) + bit0 ? 0x80 : 0;
 
         // Store bit0 into the carry
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
