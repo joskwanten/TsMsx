@@ -97,14 +97,13 @@ export class Z80 implements CPU {
             value2 += 1;
         }
 
-
-        let result = sub ?  value1 - value2 : value1 + value2;
+        let result =  sub ? value1 - value2 : value1 + value2;
 
         // Set / Reset N flag depending if it is an addition or substraction
-        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
+        if (sub) { this.r8[F] |= Flags.N } else { this.r8[F] &= ~Flags.N }
 
         // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -115,41 +114,45 @@ export class Z80 implements CPU {
 
         // Overflow, if signs of both values are the same and the sign result is different, then we have
         // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
-        let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) != (value1 & 0x80));
 
-        // Set carry if bit 9 is set
-        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+        if (sub) {
+            let overflow = ((value1 & 0x80) !== (value2 & 0x80)) && ((result & 0x80) !== (value1 & 0x80));
+            if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+            let H = (((value1 & 0x0f) - (value2 & 0x0f)) & 0x10) ? true : false;
+            if (H) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
+        } else {
+            let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) !== (value1 & 0x80));
+            if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+            let H = (((value1 & 0x0f) + (value2 & 0x0f)) & 0x10) ? true : false;
+            if (H) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
+        }
 
         return result;
     }
 
     neg(value: number): number {
-        // If carry has to be taken into account add one to the second operand
+        let result = (value == 0x80) ? 0x80 : -value;
 
-        // let result = sub ?  value1 - value2 : value1 + value2;
+        // Set N flag
+        this.r8[F] |= Flags.N;
 
-        // // Set / Reset N flag depending if it is an addition or substraction
-        // if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
-
+        // Set Half carry if lower nibble is > 0 before making the number negative
+        if ((value & 0x0f) > 0) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
+        
         // // Set Zero flag if result is zero
-        // if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // // Set Sign / F3 / F5 are copies of the result
-        // this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
-        // this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
 
-        // // Set carry if bit 9 is set
-        // if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+        // // Set carry if result != 0
+        if (result) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
-        // // Overflow, if signs of both values are the same and the sign result is different, then we have
-        // // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
-        // let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) != (value1 & 0x80));
+        // // Set overflow if bit 8 is set
+        if (value === 0x80) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
 
-        // // Set carry if bit 9 is set
-        // if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
-
-        // return result;
-        return 0;
+        return result;
     }
 
     addSub16(value1: number, value2: number, sub: boolean, carry: boolean): number {
@@ -189,7 +192,7 @@ export class Z80 implements CPU {
         return result;
     }
 
-    registerSystemCall(addr: number, func: (cpu: Z80) => void ) {
+    registerSystemCall(addr: number, func: (cpu: Z80) => void) {
         this.systemCalls[addr] = func;
     }
 
@@ -230,13 +233,17 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.C;
 
         // Set Zero flag if result is zero
-        if (this.r8[A] == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (this.r8[A] & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
 
         // Set parity if even
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+
+        // And operation set H else reset
+        if (operation === LogicalOperation.AND) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
+
     }
 
     shiftRotateFlags(result: number, PVFlag: boolean) {
@@ -446,11 +453,14 @@ export class Z80 implements CPU {
 
         this.r16[BC]--;
 
+        // Reset Half Carry
+        this.r8[F] &= ~Flags.H; 
+
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
         if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
-        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+        if (true) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
     }
 
     cpi_cpd(inc: boolean) {
@@ -528,61 +538,66 @@ export class Z80 implements CPU {
 
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            try {
-                this.opcodesED[opcode](addr);
-            } catch(e: any) {
-                this.opcodes[opcode](addr);
-                // console.error(e);
-                // console.error('Address: ' + addr.toString(16));
-                // console.error('Opcode: ' + opcode);
-                // throw e;
+            let func =  this.opcodesED[opcode];
+            if (func) {
+                func(addr);
+            } else {
+                this.opcodes[0x00](addr);
             }
         }
+
         this.opcodes[0xDD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesDD[opcode](addr);
+            let func =  this.opcodesDD[opcode];
+            if (func) {
+                func(addr);
+            } else {
+                this.opcodes[0x00](addr);
+            }
         }
         this.opcodes[0xFD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesFD[opcode](addr);
+            let func =  this.opcodesFD[opcode];
+            if (func) {
+                func(addr);
+            } else {
+                this.opcodes[0x00](addr);
+            }
         }
         this.opcodes[0xCB] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            
-            try {
-                this.opcodesCB[opcode](addr);
-            } catch(e: any) {
-                this.opcodes[opcode](addr);
-                // console.error(e);
-                // console.error('Address: ' + addr.toString(16));
-                // console.error('Opcode: ' + opcode);
-                // throw e;
+            let func =  this.opcodesCB[opcode];
+            if (func) {
+                func(addr);
+            } else {
+                this.opcodes[0x00](addr);
             }
         }
         this.opcodesDD[0xCB] = (addr) => {
             let o = this.memory.uread8(this.r16[PC]++);
             let opcode = this.memory.uread8(this.r16[PC]++);
-            try {
-                this.opcodesDDCB[opcode](addr, o);
-            } catch(e: any) {
-                this.opcodes[opcode](addr);
+            let func = this.opcodesDDCB[opcode];
+            if (func) {
+                func(addr, o);
+            } else {
+                this.opcodes[0x00](addr);
             }
         }
         this.opcodesFD[0xCB] = (addr) => {
             let o = this.memory.uread8(this.r16[PC]++);
             let opcode = this.memory.uread8(this.r16[PC]++);
-        
-            try {
-                this.opcodesFDCB[opcode](addr, o);
-            } catch(e: any) {
-                this.opcodes[opcode](addr);
+            let func = this.opcodesFDCB[opcode];
+            if (func) {
+                func(addr, o);
+            } else {
+                this.opcodes[0x00](addr);
             }
         }
 
 
         this.addOpcodes();
 
-        
+
 
     }
 

@@ -356,3 +356,4 @@ XOR n;7;EE n;2
 XOR r;4;A8+r;1
 XOR IXp;8;DD A8+p;2
 XOR IYq;8;FD A8+q;2
+NEG;8;ED 4c;2

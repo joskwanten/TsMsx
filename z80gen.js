@@ -628,7 +628,7 @@ function generateSCFOpcode(r, opcode) {
 
 function generateNegOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitCode(`this.r8[A] = this.addSub8(0, this.r8[A], true, false);`);
+    emitCode(`this.r8[A] = this.neg(this.r8[A]);`);
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`NEG\`);`);
     emitCode(`});\n`);
