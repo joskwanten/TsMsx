@@ -352,7 +352,7 @@ export class Z80 implements CPU {
     rotateRLD() {
         // Performs a 4-bit leftward rotation of the 12-bit number whose 4 most signigifcant 
         // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
-        let val = (this.memory.read8(this.r16[HL]) << 4) | (this.r8[A] & 0xf);
+        let val = (this.memory.uread8(this.r16[HL]) << 4) | (this.r8[A] & 0xf);
         this.r8[A] = val >> 8;
         this.memory.uwrite8(this.r16[HL], val);
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
@@ -364,7 +364,7 @@ export class Z80 implements CPU {
 
     rotateRRD() {
         // Like rld, except rotation is rightward.
-        let val = this.memory.read8(this.r16[HL]);
+        let val = this.memory.uread8(this.r16[HL]);
         let a = this.r8[A] & 0xf;
         this.r8[A] = val & 0xf;
         val = a << 4 + val >> 4;
@@ -531,10 +531,11 @@ export class Z80 implements CPU {
             try {
                 this.opcodesED[opcode](addr);
             } catch(e: any) {
-                console.error(e);
-                console.error('Address: ' + addr.toString(16));
-                console.error('Opcode: ' + opcode);
-                throw e;
+                this.opcodes[opcode](addr);
+                // console.error(e);
+                // console.error('Address: ' + addr.toString(16));
+                // console.error('Opcode: ' + opcode);
+                // throw e;
             }
         }
         this.opcodes[0xDD] = (addr) => {
@@ -547,17 +548,35 @@ export class Z80 implements CPU {
         }
         this.opcodes[0xCB] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesCB[opcode](addr);
+            
+            try {
+                this.opcodesCB[opcode](addr);
+            } catch(e: any) {
+                this.opcodes[opcode](addr);
+                // console.error(e);
+                // console.error('Address: ' + addr.toString(16));
+                // console.error('Opcode: ' + opcode);
+                // throw e;
+            }
         }
         this.opcodesDD[0xCB] = (addr) => {
             let o = this.memory.uread8(this.r16[PC]++);
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesDDCB[opcode](addr, o);
+            try {
+                this.opcodesDDCB[opcode](addr, o);
+            } catch(e: any) {
+                this.opcodes[opcode](addr);
+            }
         }
         this.opcodesFD[0xCB] = (addr) => {
             let o = this.memory.uread8(this.r16[PC]++);
             let opcode = this.memory.uread8(this.r16[PC]++);
-            this.opcodesFDCB[opcode](addr, o);
+        
+            try {
+                this.opcodesFDCB[opcode](addr, o);
+            } catch(e: any) {
+                this.opcodes[opcode](addr);
+            }
         }
 
 

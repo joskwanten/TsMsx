@@ -89,7 +89,7 @@ async function reset() {
                 case 0x2f:
                     console.log(`Debug info ${address.toString(16)}, ${value}, ${String.fromCharCode(value)}`)
                 default:
-                    console.log(`Port write not implemented ${address.toString(16)}`);
+                    //console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
             }
         }
@@ -193,8 +193,8 @@ window.onload = () => {
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
         while (running) {
-            step(10000000, false);
-            await wait(10);
+            step(100000, false);
+            await wait(1);
             if (!running) {
                 return;
             }
@@ -220,7 +220,7 @@ window.onload = () => {
         // 0x0da6 - call 0x23bf (rdslt)
         // 0x0daf - just before some ix commands (logo_none:)
         // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x8382); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x8259); // 0x280 ret verder onderzoeken
 
         //
     });
