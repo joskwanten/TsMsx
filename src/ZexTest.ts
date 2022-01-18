@@ -3,7 +3,7 @@ import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger, Registers } from './Logger';
-import { Z80, C, E, DE, PC } from './z80_generated';
+import { Z80, C, E, DE, PC, SP, A } from './z80_generated';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
@@ -17,16 +17,16 @@ let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt());
 
 async function reset() {
-    let response = await fetch('testfiles/zexdoc.com');
+    let response = await fetch('testfiles/z80doc.bin');
     let buffer = await response.arrayBuffer();
     let zexdoc = new Uint8Array(buffer);
-    
+
     // This position is read by Zexall to set the stack pointer (SP)    
     let mem = new Ram();
     let romMemory = new Uint8Array(0x10000);
-    zexdoc.forEach((b, i) => mem.uwrite8(i + 0x100, b));
-    mem.uwrite8(0x006, 0x00);
-    mem.uwrite8(0x007, 0xf3);
+    zexdoc.forEach((b, i) => mem.uwrite8(i + 0x8000, b));
+    // mem.uwrite8(0x006, 0x00);
+    // mem.uwrite8(0x007, 0xf3);
 
     class ScreenLogger implements Logger {
         debug(str: string, registers: Registers): void {
@@ -78,7 +78,7 @@ async function reset() {
                     //console.count("vdp write");
                     break;
                 case 0x99:
-                    vdp.write(true, value);                    
+                    vdp.write(true, value);
                     break;
                 case 0x7d:
                     console.debug("Check program counter");
@@ -123,8 +123,20 @@ async function reset() {
         }
     });
 
-    z80.r16[PC] = 0x100;
+    let printedChars = '';
+    z80.registerSystemCall(0x0010, (cpu: Z80) => {
+        if (cpu.r8[A] != 13) {
+            printedChars += String.fromCharCode(cpu.r8[A]);
+        } else {
+            console.log(printedChars);
+            printedChars = '';
+        }
+    });
 
+    z80.r16[PC] = 0x8000;
+    z80.r16[SP] = 0xf300;
+    // Put a RET on 0x1601 which will be called for ROM_CHAN_OPEN (ZX Spectrum)
+    z80.memory.uwrite8(0x1601, 0xc9);
     //while(1) {
     //}
 }
@@ -208,7 +220,7 @@ window.onload = () => {
         // 0x0da6 - call 0x23bf (rdslt)
         // 0x0daf - just before some ix commands (logo_none:)
         // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x1c64); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x8382); // 0x280 ret verder onderzoeken
 
         //
     });

@@ -123,6 +123,35 @@ export class Z80 implements CPU {
         return result;
     }
 
+    neg(value: number): number {
+        // If carry has to be taken into account add one to the second operand
+
+        // let result = sub ?  value1 - value2 : value1 + value2;
+
+        // // Set / Reset N flag depending if it is an addition or substraction
+        // if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
+
+        // // Set Zero flag if result is zero
+        // if (result == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+
+        // // Set Sign / F3 / F5 are copies of the result
+        // this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        // this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
+
+        // // Set carry if bit 9 is set
+        // if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // // Overflow, if signs of both values are the same and the sign result is different, then we have
+        // // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
+        // let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) != (value1 & 0x80));
+
+        // // Set carry if bit 9 is set
+        // if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+
+        // return result;
+        return 0;
+    }
+
     addSub16(value1: number, value2: number, sub: boolean, carry: boolean): number {
         // If carry has to be taken into account add one to the second operand
         if (carry && (this.r8[F] & Flags.C)) {
@@ -499,13 +528,14 @@ export class Z80 implements CPU {
 
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            // try {
+            try {
                 this.opcodesED[opcode](addr);
-            // } catch(e: any) {
-            //     console.error(e);
-            //     console.error('Address: ' + addr.toString(16));
-            //     console.error('Opcode: ' + opcode);
-            // }
+            } catch(e: any) {
+                console.error(e);
+                console.error('Address: ' + addr.toString(16));
+                console.error('Opcode: ' + opcode);
+                throw e;
+            }
         }
         this.opcodes[0xDD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
