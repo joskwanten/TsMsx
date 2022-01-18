@@ -197,8 +197,8 @@ export class Z80 implements CPU {
     }
 
 
-    incDec8(value: number, inc: boolean): number {
-        let result = inc ? value + 1 : value - 1;
+    incDec8(operand: number, inc: boolean): number {
+        let result = inc ? operand + 1 : operand - 1;
 
         // Reset N flag if it is an increment
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N; }
@@ -212,11 +212,11 @@ export class Z80 implements CPU {
         // Carry is unaffected
 
         // Half carry
-        let halfcarry = inc ? (value & 0xf) === 0xf : (value & 0xf) === 0;
+        let halfcarry = inc ? (operand & 0xf) === 0xf : (operand & 0xf) === 0;
         if (halfcarry) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ? (value == 0x7f) : (value == 0x80);
+        let overflow = inc ? (operand == 0x7f) : (operand == 0x80);
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
@@ -252,7 +252,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.N;
 
         // Set Zero flag if result is zero
-        if (result == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
@@ -265,7 +265,7 @@ export class Z80 implements CPU {
 
 
     rotateLeft(value: number, PVFlag = true): number {
-        let result = (value << 1) + (this.r8[F] & Flags.C) ? 1 : 0;
+        let result = (value << 1) + ((this.r8[F] & Flags.C) ? 1 : 0);
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
         this.shiftRotateFlags(result, PVFlag);
         return result;
@@ -303,7 +303,7 @@ export class Z80 implements CPU {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
         // Do shifting and add bit0 as bit 7 (0x80)
-        let result = (value >>> 1) + bit0 ? 0x80 : 0;
+        let result = ((value >>> 1) & 0x7f) + (bit0 ? 0x80 : 0);
 
         // Store bit0 into the carry
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
