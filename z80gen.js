@@ -326,7 +326,7 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
             emitCode(stack_pc); // Call puts program counter on the stack
             emitCode(`this.r16[PC] = ${varName};`);
         } else {
-            emitCode(`this.r16[PC] += ${varName};`); 
+            emitCode(`this.r16[PC] += ${varName};`);
         }
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
@@ -337,7 +337,7 @@ function generateJRAndCallOpcode(r, condition, src, opcode) {
             emitCode(stack_pc); // Call puts program counter on the stack
             emitCode(`this.r16[PC] = ${varName};`);
         } else {
-            emitCode(`this.r16[PC] += ${varName};`); 
+            emitCode(`this.r16[PC] += ${varName};`);
         }
         emitCode(`this.cycles += ${r.TimingZ80};`);
     }
@@ -521,11 +521,19 @@ function generateIncDecOpcode(r, src, opcode, inc) {
 
     let val = 'val';
     if (registersLD[src].direct && registersLD[src].type == 8) {
-        emitCode(`${registersLD[src].direct} = this.incDec8(${registersLD[src].direct}, ${inc});`);
+        if (inc) {
+            emitCode(`${registersLD[src].direct} = this.inc8(${registersLD[src].direct});`);
+        } else {
+            emitCode(`${registersLD[src].direct} = this.dec8(${registersLD[src].direct});`);
+        }
     } else {
         emitCode(registersLD[src].src);
         if (registersLD[src].type == 8) {
-            emitCode(`${val} = this.incDec8(${val}, ${inc});`);
+            if (inc) {
+                emitCode(`${val} = this.inc8(${val});`);
+            } else {
+                emitCode(`${val} = this.dec8(${val});`);
+            }
         } else {
             if (inc) {
                 emitCode(`${val}++;`);
@@ -669,14 +677,14 @@ function generateRRAOpcode(r, opcode) {
     emitCode(`this.r8[F] &= ~mask;`);
     emitCode(`this.r8[F] |= (mask & temp_flags);`);
     emitCode(`this.cycles += ${r.TimingZ80};`);
-    emitLog(`this.log(addr, \`RRA\`);`);
+    emitLog(`this.log(addr, \`RLA\`);`);
     emitCode(`});\n`);
 }
 
 function generateRRCAOpcode(r, opcode) {
     generateLambda(r, opcode);
     emitCode(`let temp_flags = this.r8[F];`);
-    emitCode(`this.r8[A] = this.rotateRightCarry(this.r8[A], true);`);
+    emitCode(`this.r8[A] = this.rotateRightCarry(this.r8[A]);`);
     emitComment('Flags S, Z and PV are not set');
     emitCode(`let mask = Flags.S | Flags.Z | Flags.PV;`);
     emitCode(`this.r8[F] &= ~mask;`);

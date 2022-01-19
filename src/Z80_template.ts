@@ -198,11 +198,11 @@ export class Z80 implements CPU {
     }
 
 
-    incDec8(operand: number, inc: boolean): number {
-        let result = inc ? operand + 1 : operand - 1;
+    inc8(operand: number): number {
+        let result = operand + 1;
 
         // Reset N flag if it is an increment
-        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N; }
+        this.r8[F] &= ~Flags.N;
 
         // Set Zero flag if result is zero
         if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
@@ -213,15 +213,41 @@ export class Z80 implements CPU {
         // Carry is unaffected
 
         // Half carry
-        let halfcarry = inc ? (operand & 0xf) === 0xf : (operand & 0xf) === 0;
+        let halfcarry =  (operand & 0xf) === 0xf;
         if (halfcarry) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ? (operand === 0x7f) : (operand === 0x80);
+        let overflow = (operand === 0x7f);
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
     }
+
+    dec8(operand: number): number {
+        let result = operand - 1;
+
+        // Reset N flag if it is an increment
+        this.r8[F] |= Flags.N;
+
+        // Set Zero flag if result is zero
+        if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set sign if the result has its sign bit set (2-complement)
+        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+
+        // Carry is unaffected
+
+        // Half carry
+        let halfcarry =  (operand & 0xf) === 0;
+        if (halfcarry) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
+
+        // Overflow, if the sign becomes negative when adding one
+        let overflow = (operand === 0x80);
+        if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+
+        return result;
+    }
+
 
     logicalOperation(value: number, operation: LogicalOperation) {
         // Add 1 or in case of decrement the two's complement of one
@@ -260,7 +286,7 @@ export class Z80 implements CPU {
 
         // Set parity if even
         if (PVFlag) {
-            if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+            if (this.evenParity[result & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
         }
     }
 
@@ -285,18 +311,18 @@ export class Z80 implements CPU {
         return result;
     }
 
-    rotateRight(value: number, PVFlag = true): number {
+    rotateRight(value: number): number {
         // bit 0 will be shifted to the carry
         let bit0 = value & 1;
 
         // Do shifting and add carry as bit 7 (0x80)
-        let result = (value >> 1) + (this.r8[F] & Flags.C) ? 0x80 : 0;
+        let result = (value >>> 1) + ((this.r8[F] & Flags.C) ? 0x80 : 0);
 
         // Store bit 0 into the carry
         if (bit0) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
 
         // Set flags
-        this.shiftRotateFlags(result, PVFlag);
+        this.shiftRotateFlags(result, true);
         return result;
     }
 
@@ -361,7 +387,7 @@ export class Z80 implements CPU {
         // Performs a 4-bit leftward rotation of the 12-bit number whose 4 most signigifcant 
         // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
         let val = (this.memory.uread8(this.r16[HL]) << 4) | (this.r8[A] & 0xf);
-        this.r8[A] = val >> 8;
+        this.r8[A] = val >>> 8;
         this.memory.uwrite8(this.r16[HL], val);
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
@@ -375,7 +401,7 @@ export class Z80 implements CPU {
         let val = this.memory.uread8(this.r16[HL]);
         let a = this.r8[A] & 0xf;
         this.r8[A] = val & 0xf;
-        val = a << 4 + val >> 4;
+        val = a << 4 + val >>> 4;
         this.memory.uwrite8(this.r16[HL], val);
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
@@ -443,7 +469,7 @@ export class Z80 implements CPU {
             this.r16[HL]--;
         }
 
-        this.r8[B] = this.incDec8(this.r8[B], false);
+        this.r8[B] = this.dec8(this.r8[B]);
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
@@ -525,7 +551,7 @@ export class Z80 implements CPU {
         // is added to the register. Then the four most significant bits are checked. If this more 
         // significant digit also happens to be greater than 9 or the C flag is set, then $60 is added.
         let al = this.r8[A];
-        let ah = this.r8[A] >> 4;
+        let ah = this.r8[A] >>> 4;
         let c = false;
         if (al > 9) {
             al += 6;
