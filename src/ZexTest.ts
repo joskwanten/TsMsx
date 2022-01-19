@@ -193,7 +193,7 @@ window.onload = () => {
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
         while (running) {
-            step(100000, false);
+            step(1000000, false);
             await wait(1);
             if (!running) {
                 return;

@@ -418,13 +418,13 @@ export class Z80 implements CPU {
         // Create a mask where the bit is set and do a bitwise or
         // to set the bit
         let mask = 1 << n;
-        return n | mask;
+        return value | mask;
     }
 
     res(n: number, value: number) {
         // Create a mask where the bit is 0 and other bits 1
         let mask = ~(1 << n);
-        return n & mask;
+        return value & mask;
     }
 
     // Method for handing the INI, IND, INIR, INDR, OUTI, OUTD, OTIR and OTDR

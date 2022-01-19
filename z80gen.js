@@ -204,10 +204,10 @@ function generateBitAndSetOpcode(r, dst, src, opcode) {
     if (r.Instruction.indexOf('BIT') == 0) {
         emitCode(`this.bit(${dst}, val)`);
     } else if (r.Instruction.indexOf('SET') == 0) {
-        emitCode(`val = this.set(val, ${dst})`);
+        emitCode(`val = this.set(${dst}, val)`);
         emitCode(registersLD[src].dst);
     } else {
-        emitCode(`val = this.res(val, ${dst})`);
+        emitCode(`val = this.res(${dst}, val)`);
         emitCode(registersLD[src].dst);
     }
 
