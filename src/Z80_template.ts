@@ -265,10 +265,10 @@ export class Z80 implements CPU {
     }
 
 
-    rotateLeft(value: number, PVFlag = true): number {
+    rotateLeft(value: number): number {
         let result = (value << 1) + ((this.r8[F] & Flags.C) ? 1 : 0);
         if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
-        this.shiftRotateFlags(result, PVFlag);
+        this.shiftRotateFlags(result, true);
         return result;
     }
 

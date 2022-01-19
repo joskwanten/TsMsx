@@ -636,9 +636,8 @@ function generateNegOpcode(r, opcode) {
 
 function generateRLAOpcode(r, opcode) {
     generateLambda(r, opcode);
-
     emitCode(`let temp_flags = this.r8[F];`);
-    emitCode(`this.r8[A] = this.rotateLeft(this.r8[A], false);`);
+    emitCode(`this.r8[A] = this.rotateLeft(this.r8[A]);`);
     emitComment('Flags S, Z and PV are not set');
     emitCode(`let mask = Flags.S | Flags.Z | Flags.PV;`);
     emitCode(`this.r8[F] &= ~mask;`);
@@ -663,9 +662,14 @@ function generateRLCAOpcode(r, opcode) {
 
 function generateRRAOpcode(r, opcode) {
     generateLambda(r, opcode);
-    emitCode(`this.r8[A] = this.rotateRight(this.r8[A], true);`);
-    emitCode(`this.cycles += ${r.TimingZ80}`);
-    emitLog(`this.log(addr, \`RRA\`)`);
+    emitCode(`let temp_flags = this.r8[F];`);
+    emitCode(`this.r8[A] = this.rotateRight(this.r8[A]);`);
+    emitComment('Flags S, Z and PV are not set');
+    emitCode(`let mask = Flags.S | Flags.Z | Flags.PV;`);
+    emitCode(`this.r8[F] &= ~mask;`);
+    emitCode(`this.r8[F] |= (mask & temp_flags);`);
+    emitCode(`this.cycles += ${r.TimingZ80};`);
+    emitLog(`this.log(addr, \`RRA\`);`);
     emitCode(`});\n`);
 }
 
