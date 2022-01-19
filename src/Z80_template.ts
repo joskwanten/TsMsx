@@ -399,11 +399,20 @@ export class Z80 implements CPU {
         // Opposite of the nth bit is written into the Z flag. 
         // C is preserved, 
         // N is reset, H is set, and S and P/V are undefined.
-        let mask = 1 << n;
-        if (value & mask) { this.r8[F] &= ~Flags.Z } else { this.r8[F] |= Flags.Z };
+        if (value & (1 << n)) { 
+            this.r8[F] &= ~Flags.Z;
+            this.r8[F] &= ~Flags.PV;
+            if (n === 7) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; };
+        } else { 
+            this.r8[F] |= Flags.Z;
+            this.r8[F] |= Flags.PV;
+            this.r8[F] &= ~Flags.S;
+        };
+
         this.r8[F] &= ~Flags.N;
-        this.r8[F] |= Flags.H;
+        this.r8[F] |= Flags.H;        
     }
+
 
     set(n: number, value: number) {
         // Create a mask where the bit is set and do a bitwise or
