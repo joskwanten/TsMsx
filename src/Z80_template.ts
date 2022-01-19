@@ -97,7 +97,7 @@ export class Z80 implements CPU {
             value2 += 1;
         }
 
-        let result =  sub ? value1 - value2 : value1 + value2;
+        let result = sub ? value1 - value2 : value1 + value2;
 
         // Set / Reset N flag depending if it is an addition or substraction
         if (sub) { this.r8[F] |= Flags.N } else { this.r8[F] &= ~Flags.N }
@@ -138,7 +138,7 @@ export class Z80 implements CPU {
 
         // Set Half carry if lower nibble is > 0 before making the number negative
         if ((value & 0x0f) > 0) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
-        
+
         // // Set Zero flag if result is zero
         if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
@@ -155,39 +155,40 @@ export class Z80 implements CPU {
         return result;
     }
 
-    addSub16(value1: number, value2: number, sub: boolean, carry: boolean): number {
+    addSub16(operand1: number, operand2: number, sub: boolean, withCarry: boolean): number {
         // If carry has to be taken into account add one to the second operand
-        if (carry && (this.r8[F] & Flags.C)) {
-            value2 += 1;
+        if (withCarry && (this.r8[F] & Flags.C)) {
+            operand2 += 1;
         }
 
-        if (sub) {
-            // Substraction is the same as an addition except that it
-            // uses the 2's-complement value for the computation
-            value2 = (~(value2 - 1)) & 0xffff
+        let result = sub ? operand1 - operand2 : operand1 + operand2;
+
+        // Reset N flag since we are adding
+        if (sub) { 
+            this.r8[F] |= Flags.N;
+            if (((operand1 & 0x0fff) - (operand2 & 0x0fff)) & 0x1000) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
+        } else { 
+            this.r8[F] &= ~Flags.N; 
+            // Set half carry
+            if (((operand1 & 0x0fff) + (operand2 & 0x0fff)) & 0x1000) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
         }
 
-        let result = value1 + value2;
-
-        // Set / Reset N flag depending if it is an addition or substraction
-        if (sub) { this.r8[F] |= ~Flags.N } else { this.r8[F] &= ~Flags.N }
-
-        // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
-
-        // Set Sign / F3 / F5 are copies of the result
-        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
-        this.r8[F] |= ((result >> 8) & Flags.S_F5_F3); // Set bits if set in the result
-
         // Set carry if bit 9 is set
-        if (result & 0x10000) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+        if (result & 0x10000) { this.r8[F] |= Flags.C; } else { this.r8[F] &= ~Flags.C; }
 
-        // Overflow, if signs of both values are the same and the sign result is different, then we have
-        // an overflow e.g. when adding 0x7f (127) + 1 = 0x80 (-1)
-        let overflow = ((value1 & 0x8000) == (value2 & 0x8000)) && ((result & 0x8000) != (value1 & 0x8000));
-
-        // Set carry if bit 9 is set
-        if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
+        // Set flags for ADC operation
+        if (withCarry) {
+            // Set Zero flag if result is zero
+            if ((result & 0xffff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+            if (sub) {
+                let overflow = ((operand1 & 0x8000) !== (operand2 & 0x8000)) && ((result & 0x8000) !== (operand1 & 0x8000));
+                if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }  
+            } else {
+                let overflow = ((operand1 & 0x8000) === (operand2 & 0x8000)) && ((result & 0x8000) !== (operand1 & 0x8000));
+                if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+            }
+            if (result & 0x8000) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+        }
 
         return result;
     }
@@ -204,7 +205,7 @@ export class Z80 implements CPU {
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N; }
 
         // Set Zero flag if result is zero
-        if ((result && 0xff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
@@ -216,7 +217,7 @@ export class Z80 implements CPU {
         if (halfcarry) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
 
         // Overflow, if the sign becomes negative when adding one
-        let overflow = inc ? (operand == 0x7f) : (operand == 0x80);
+        let overflow = inc ? (operand === 0x7f) : (operand === 0x80);
         if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
 
         return result;
@@ -454,7 +455,7 @@ export class Z80 implements CPU {
         this.r16[BC]--;
 
         // Reset Half Carry
-        this.r8[F] &= ~Flags.H; 
+        this.r8[F] &= ~Flags.H;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
         if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
@@ -538,7 +539,7 @@ export class Z80 implements CPU {
 
         this.opcodes[0xED] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            let func =  this.opcodesED[opcode];
+            let func = this.opcodesED[opcode];
             if (func) {
                 func(addr);
             } else {
@@ -548,7 +549,7 @@ export class Z80 implements CPU {
 
         this.opcodes[0xDD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            let func =  this.opcodesDD[opcode];
+            let func = this.opcodesDD[opcode];
             if (func) {
                 func(addr);
             } else {
@@ -557,7 +558,7 @@ export class Z80 implements CPU {
         }
         this.opcodes[0xFD] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            let func =  this.opcodesFD[opcode];
+            let func = this.opcodesFD[opcode];
             if (func) {
                 func(addr);
             } else {
@@ -566,7 +567,7 @@ export class Z80 implements CPU {
         }
         this.opcodes[0xCB] = (addr) => {
             let opcode = this.memory.uread8(this.r16[PC]++);
-            let func =  this.opcodesCB[opcode];
+            let func = this.opcodesCB[opcode];
             if (func) {
                 func(addr);
             } else {
