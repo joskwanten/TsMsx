@@ -206,10 +206,11 @@ export class Z80 implements CPU {
 
         // Set Zero flag if result is zero
         if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-
+        
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
+
         // Carry is unaffected
 
         // Half carry
@@ -579,6 +580,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
+                this.log(this.r16[PC] - 1, `Unknown opcode ED ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -589,6 +591,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
+                this.log(this.r16[PC] - 1, `Unknown opcode DD ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -598,6 +601,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
+                this.log(this.r16[PC] - 1, `Unknown opcode FD ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -607,6 +611,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
+                this.log(this.r16[PC] - 1, `Unknown opcode CB ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -617,6 +622,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr, o);
             } else {
+                this.log(this.r16[PC] - 2, `Unknown opcode DDCB ${o} ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -627,6 +633,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr, o);
             } else {
+                this.log(this.r16[PC] - 2, `Unknown opcode FDCB ${o} ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
