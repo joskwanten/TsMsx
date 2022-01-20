@@ -24,7 +24,7 @@ export class SubSlotSelector implements Memory  {
 
     uread8(address: number): number {
         if (address == 0xffff) {
-            console.log(`Reading Subslot register ${address.toString(16)}`);
+            //console.log(`Reading Subslot register ${address.toString(16)}`);
             return (~this.subSlotRegister) & 0xff;
         }        
         return this.selectedSlot(address).uread8(address);
@@ -40,6 +40,7 @@ export class SubSlotSelector implements Memory  {
 
     uwrite8(address: number, value: number): void {
         if (address == 0xffff) {
+            //console.log(`Writing sub slot register : ${value}`);
             this.subSlotRegister = value & 0xff;            
         } else {
             this.selectedSlot(address).uwrite8(address, value);

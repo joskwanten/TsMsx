@@ -157,6 +157,7 @@ function wait(ms: number) {
 
 let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt());
+let debugBuffer = '';
 
 async function reset() {
     let response = await fetch('cbios_main_msx1.rom');
@@ -234,7 +235,12 @@ async function reset() {
                     throw new Error('Invalid')
                 case 0x2e:
                 case 0x2f:
-                    console.log(`Debug info ${address.toString(16)}, ${value}, ${String.fromCharCode(value)}`)
+                    //console.log(`Debug info ${address.toString(16)}, ${value}, ${String.fromCharCode(value)}`)
+                    if (value == 0) {
+                        console.log(debugBuffer);
+                    } else {
+                        debugBuffer += String.fromCharCode(value);
+                    }
                 default:
                     console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
@@ -306,7 +312,7 @@ window.onload = () => {
     document.querySelector('#run')?.addEventListener('click', async () => {
         running = true;
         while (running) {
-            step(1000, false);
+            step(100, false);
             await wait(10);
             if (!running) {
                 return;
@@ -333,7 +339,7 @@ window.onload = () => {
         // 0x0da6 - call 0x23bf (rdslt)
         // 0x0daf - just before some ix commands (logo_none:)
         // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x0d86); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x003e); // 0x280 ret verder onderzoeken
 
         //
     });

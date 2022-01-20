@@ -388,14 +388,24 @@ export class Z80 implements CPU {
     rotateRLD() {
         // Performs a 4-bit leftward rotation of the 12-bit number whose 4 most signigifcant 
         // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
-        let val = (this.memory.uread8(this.r16[HL]) << 4) | (this.r8[A] & 0xf);
-        this.r8[A] = val >>> 8;
+        let val = ((this.memory.uread8(this.r16[HL]) << 4) + (this.r8[A] & 0xf));
+
+        this.r8[A] = (this.r8[A] & 0xf0) | ((val  >>> 8) & 0xf);
         this.memory.uwrite8(this.r16[HL], val);
+        
+         // Reset N flag if it is an increment
+         this.r8[F] = ~Flags.N;
+
+         // Set Zero flag if result in A is 0
+         if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+         
+         // Set Sign / F3 / F5 are copies of the result
+         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+         this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
+ 
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
-        if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
-        if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
     rotateRRD() {
@@ -646,7 +656,10 @@ export class Z80 implements CPU {
     }
 
     interrupt(): void {
-        throw new Error('Method not implemented.');
+        //throw new Error('Method not implemented.');
+        if (this.halted) {
+            this.halted = false;
+        }
     }
 
     private hex16(n: number) {

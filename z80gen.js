@@ -28,7 +28,7 @@ this.r16[PC] += 2;`;
 
 let nn_read_ind = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
-let val = this.memory.uread16(nn);`;
+let val = this.memory.uread8(nn);`;
 
 let nn_write_ind8 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
@@ -281,18 +281,26 @@ function generateShiftRotateOpcode(r, dst, src, opcode) {
 
 function generateJPOpcode(r, condition, src, opcode) {
     generateLambda(r, opcode);
-    emitCode(registersLD[src].src);
+    if (src != '(HL)' && src != '(IX)' && src != '(IY)') {
+        emitCode(registersLD[src].src);
+    }
 
     let instr = r.Instruction.replace(/r/, src)
         .replace(/o/, '${o.toString(16)}')
         .replace(/nn/, '${val.toString(16)}');
 
-    if (condition) {
-        emitCode(`if (${conditions[condition]}) {`);;
-        emitCode(`this.r16[PC] = val;`)
-        emitCode(`}`);
-    } else {
-        emitCode(`this.r16[PC] = val;`)
+    if (src != '(HL)' && src != '(IX)' && src != '(IY)') {
+        if (condition) {
+            emitCode(`if (${conditions[condition]}) {`);;
+            emitCode(`this.r16[PC] = val;`)
+            emitCode(`}`);
+        } else {
+            emitCode(`this.r16[PC] = val;`)
+        }
+    }
+    else {
+        src = src.replace(/\(/, "").replace(/\)/, "");
+        emitCode(`this.r16[PC] = this.r16[${src}];`)
     }
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
