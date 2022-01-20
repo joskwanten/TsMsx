@@ -339,7 +339,9 @@ window.onload = () => {
         // 0x0da6 - call 0x23bf (rdslt)
         // 0x0daf - just before some ix commands (logo_none:)
         // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x003e); // 0x280 ret verder onderzoeken
+        // 0x003e
+        // 0x11d5
+        z80?.executeUntil(0x11d5); // 0x280 ret verder onderzoeken
 
         //
     });
