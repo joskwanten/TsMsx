@@ -205,7 +205,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.N;
 
         // Set Zero flag if result is zero
-        if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
         
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -231,7 +231,7 @@ export class Z80 implements CPU {
         this.r8[F] |= Flags.N;
 
         // Set Zero flag if result is zero
-        if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
         
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
