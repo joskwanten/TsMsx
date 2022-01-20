@@ -207,9 +207,6 @@ export class Z80 implements CPU {
         // Set Zero flag if result is zero
         if ((result && 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
-        // Set sign if the result has its sign bit set (2-complement)
-        if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
-
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
