@@ -656,9 +656,16 @@ export class Z80 implements CPU {
     }
 
     interrupt(): void {
-        //throw new Error('Method not implemented.');
-        if (this.halted) {
+        if (this.interruptEnabled) {
+            // Push the program counter
+            //this.r16[PC] += 2;
+            this.r16[SP] -= 2;
+            this.memory.uwrite16(this.r16[SP], this.r16[PC]);
+            // Execute the interrupt routine
             this.halted = false;
+            let retadd = this.r16[PC];
+            this.r16[PC] = 0x0038;
+            this.log(0x0038, `INT ($${retadd})`);
         }
     }
 

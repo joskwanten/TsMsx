@@ -3,10 +3,11 @@ import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger, Registers } from './Logger';
-import { Z80 } from './z80_generated';
+import { PC, Z80 } from './z80_generated';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
+import { debug } from 'console';
 
 /*
 "11 0A 00 1B 7A B3 C2 03 00"
@@ -161,21 +162,22 @@ let debugBuffer = '';
 
 async function reset() {
     let response = await fetch('cbios_main_msx1.rom');
+    //let response = await fetch('MSX1.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('cbios_main_msx1.rom');
-    buffer = await response.arrayBuffer();
-    let game  = new Uint8Array(buffer);
-    let gameMemory = new Uint8Array(0x10000);
-    game.forEach((b, i) => gameMemory[i] = b);
+    // response = await fetch('SCOBRA.ROM');
+    // buffer = await response.arrayBuffer();
+    // let game  = new Uint8Array(buffer);
+    // let gameMemory = new Uint8Array(0x10000);
+    // game.forEach((b, i) => gameMemory[i] = b);
 
 
     let slot0 = new Rom(biosMemory);
-    //let slot1 = new EmptySlot();
-    let slot1 = new Rom(gameMemory);
+    let slot1 = new EmptySlot();
+    //let slot1 = new Rom(gameMemory);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
@@ -211,6 +213,7 @@ async function reset() {
         }
     }
 
+    let buf = "";
     class IoBus implements IO {
         read8(address: number): number {
             switch (address) {
@@ -229,9 +232,16 @@ async function reset() {
             switch (address) {
                 case 0x98:
                     vdp.write(false, value);
-                    //console.count("vdp write");
+                    if (buf.length < 40) {
+                        buf += String.fromCharCode(value);
+                    } else {
+                        console.log(buf);
+                        buf = "";
+                    }
+
                     break;
                 case 0x99:
+                    //console.log(`vdp write 0x${value.toString(16)}`);
                     vdp.write(true, value);
                     break;
                 case 0xa8:
@@ -251,7 +261,7 @@ async function reset() {
                         debugBuffer += String.fromCharCode(value);
                     }
                 default:
-                    console.log(`Port write not implemented ${address.toString(16)}`);
+                    //console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
             }
         }
@@ -287,6 +297,10 @@ async function run() {
         let timestamp = Date.now();
         while((z80.cycles - lastCycles) < 60000 && !z80.halted) {
             z80.executeSingleInstruction();
+
+            if (z80.r16[PC] === 0xe0d) {
+                console.log("BREAK");
+            }
         }
 
         let timeLeft = 16.67 - (Date.now() - timestamp);
@@ -377,7 +391,7 @@ window.onload = () => {
         // 0x0dc9 - CALL 03c2 (init32)
         // 0x003e
         // 0x11d5
-        z80?.executeUntil(0x026d); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x09d9); // 0x280 ret verder onderzoeken
 
         //
     });

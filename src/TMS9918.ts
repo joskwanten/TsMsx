@@ -108,12 +108,14 @@ export class TMS9918 {
                     console.log(`register: ${register} = ${this.registers[register].toString(16)}`);
                 } else if (value & 0x40) {
                     // Setup video write address
+                    console.log(`this.vramAddress old = ${this.vramAddress.toString(16)}`);
                     this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value & 0x3f} ${this.latchedData}`);
+                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)}`);
                 } else {
                     // Setup video write address
+                    console.log(`read this.vramAddress old = ${this.vramAddress.toString(16)}`);
                     this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value & 0x3f} ${this.latchedData}`);
+                    console.log(`read this.vramAddress = ${this.vramAddress.toString(16)}`);
                 }
             }
         } else {
@@ -121,6 +123,7 @@ export class TMS9918 {
             // Mode = 0 means writing to video memory
             this.vram[this.vramAddress] = value;
             this.vramAddress = (this.vramAddress + 1) % 0x4000;
+            console.log(`${this.vramAddress.toString(16)}:${value.toString(16)}`);
         }
     }
 
@@ -170,7 +173,7 @@ export class TMS9918 {
 
             for (let y = 0; y < 24; y++) {                
                 for (let x = 0; x < 40; x++) {
-                    let char = this.vram[PN + y * 40 + x];
+                    let char = this.vram[PN + (y * 40) + x];
                     
                 }                
             }
@@ -184,7 +187,7 @@ export class TMS9918 {
             let row = "";
             for (let y = 0; y < 24; y++) {                
                 for (let x = 0; x < 32; x++) {
-                    let char = this.vram[PN + y * 40 + x];
+                    let char = this.vram[PN + (y * 40) + x];
                    if (char) row += String.fromCharCode(char);
                 }                
             }
