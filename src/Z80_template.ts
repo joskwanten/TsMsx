@@ -735,8 +735,10 @@ export class Z80 implements CPU {
     executeUntil(breakPoint: number) {
         this.logging = false;
         while (1) {
+            let prev = this.r16[PC];
             this.executeSingleInstruction();
             if (this.r16[PC] == breakPoint) {
+                console.log(`Breakpoint prev: ${prev.toString(16)}`)
                 return;
             }
         }

@@ -163,10 +163,19 @@ async function reset() {
     let response = await fetch('cbios_main_msx1.rom');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
-    let romMemory = new Uint8Array(0x10000);
-    bios.forEach((b, i) => romMemory[i] = b);
-    let slot0 = new Rom(romMemory);
-    let slot1 = new EmptySlot();
+    let biosMemory = new Uint8Array(0x10000);
+    bios.forEach((b, i) => biosMemory[i] = b);
+
+    response = await fetch('cbios_main_msx1.rom');
+    buffer = await response.arrayBuffer();
+    let game  = new Uint8Array(buffer);
+    let gameMemory = new Uint8Array(0x10000);
+    game.forEach((b, i) => gameMemory[i] = b);
+
+
+    let slot0 = new Rom(biosMemory);
+    //let slot1 = new EmptySlot();
+    let slot1 = new Rom(gameMemory);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
@@ -266,32 +275,68 @@ reset().then(() => {
 
 let running = false;
 
+async function run() {
+    if (running || !z80) {
+        return;
+    }
+
+    running = true;
+
+    while (running) {
+        let lastCycles = z80.cycles;
+        let timestamp = Date.now();
+        while((z80.cycles - lastCycles) < 60000 && !z80.halted) {
+            z80.executeSingleInstruction();
+        }
+
+        let timeLeft = 16.67 - (Date.now() - timestamp);
+        if (timeLeft > 0) {
+            // console.log(`Left ${timeLeft}`)
+            await wait(timeLeft);
+        }
+
+        vdp.checkAndGenerateInterrupt(Date.now());
+    }
+}
+
 function step(numOfSteps: number, log = true) {
     z80?.execute(numOfSteps, log);
 }
 
 window.onload = () => {
-    // const canvas = <HTMLCanvasElement>document.getElementById('screen');
-    // const ctx = canvas.getContext('2d');
-    // const imageData = ctx?.createImageData(256, 192);
-    // if (imageData) {
-    //     // Iterate through every pixel
-    //     for (let i = 0; i < imageData.data.length; i += 4) {
-    //         // Percentage in the x direction, times 255
-    //         let x = (i % 1024) / 1024 * 255;
-    //         // Percentage in the y direction, times 255
-    //         let y = Math.ceil(i / 1024) / 1024 * 255;
+    const canvas = <HTMLCanvasElement>document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx?.createImageData(256, 192);
+    if (imageData) {
+        // Iterate through every pixel
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            // Percentage in the x direction, times 255
+            let x = (i % 1024) / 1024 * 255;
+            // Percentage in the y direction, times 255
+            let y = Math.ceil(i / 1024) / 1024 * 255;
 
-    //         // Modify pixel data
-    //         imageData.data[i + 0] = x;        // R value
-    //         imageData.data[i + 1] = y;        // G value
-    //         imageData.data[i + 2] = 255 - x;  // B value
-    //         imageData.data[i + 3] = 255;      // A value
-    //     }
+            // Modify pixel data
+            imageData.data[i + 0] = x;        // R value
+            imageData.data[i + 1] = y;        // G value
+            imageData.data[i + 2] = 255 - x;  // B value
+            imageData.data[i + 3] = 255;      // A value
+        }
 
-    //     // Draw image data to the canvas
-    //     ctx?.putImageData(imageData, 0, 0);
-    // }
+        // Draw image data to the canvas
+        ctx?.putImageData(imageData, 0, 0);
+
+        let renderRoutine = () => {
+            // Do rendering
+            vdp.render(imageData.data);
+            ctx?.putImageData(imageData, 0, 0);
+            requestAnimationFrame(renderRoutine);
+        };
+        
+        window.requestAnimationFrame(() => {
+            renderRoutine();
+        })
+        
+    }
 
     document.querySelector('#reset')?.addEventListener('click', () => {
         reset();
@@ -310,16 +355,7 @@ window.onload = () => {
     });
 
     document.querySelector('#run')?.addEventListener('click', async () => {
-        running = true;
-        while (running) {
-            step(100, false);
-            await wait(10);
-            if (!running) {
-                return;
-            }
-
-            vdp.checkAndGenerateInterrupt(Date.now());
-        }
+        run();
     });
 
     document.querySelector('#stop')?.addEventListener('click', async () => {
@@ -341,7 +377,7 @@ window.onload = () => {
         // 0x0dc9 - CALL 03c2 (init32)
         // 0x003e
         // 0x11d5
-        z80?.executeUntil(0x11d5); // 0x280 ret verder onderzoeken
+        z80?.executeUntil(0x026d); // 0x280 ret verder onderzoeken
 
         //
     });

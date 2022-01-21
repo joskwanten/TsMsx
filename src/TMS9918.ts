@@ -23,9 +23,7 @@ enum StatusFlags {
     S_FS0 = 0b00000001,
 };
 
-
 export class TMS9918 {
-
     registers = new Uint8Array(8);
     vram = new Uint8Array(0x4000);
     vramAddress = 0;
@@ -35,6 +33,23 @@ export class TMS9918 {
 
     hasLatchedData = false;
     latchedData = 0;
+
+    palette = [[0x00, 0x00, 0x00, 0x00],
+    [0x00, 0x00, 0x00, 0x01],
+    [0x21, 0xc8, 0x42, 0x01],
+    [0x5e, 0xdc, 0x78, 0x01],
+    [0x54, 0x55, 0xed, 0x01],
+    [0x7d, 0x76, 0xfc, 0x01],
+    [0xd4, 0x52, 0x4d, 0x01],
+    [0x42, 0xeb, 0xf5, 0x01],
+    [0xfc, 0x55, 0x54, 0x01],
+    [0xff, 0x79, 0x78, 0x01],
+    [0xd4, 0xc1, 0x54, 0x01],
+    [0xe6, 0xce, 0x80, 0x01],
+    [0x21, 0xb0, 0x3b, 0x01],
+    [0xc9, 0x5b, 0xba, 0x01],
+    [0xcc, 0xcc, 0xcc, 0x01],
+    [0xff, 0xff, 0xff, 0x01]]
 
     constructor(private interruptFunction: () => void) {
 
@@ -49,7 +64,11 @@ export class TMS9918 {
     }
 
     getPatternGenerationTable() {
-        return ((this.registers[4]) & 7) << 13;
+        return (this.registers[4] & 7) << 11;
+    }
+
+    getPatternNameTable() {
+        return (this.registers[2] & 0xf) << 10;
     }
 
     getTextColor() {
@@ -74,27 +93,34 @@ export class TMS9918 {
     write(mode: boolean, value: number) {
         if (mode) {
             if (!this.hasLatchedData) {
+                
                 this.latchedData = value;
                 this.hasLatchedData = true;
+
             } else {
+                
                 this.hasLatchedData = false;
+                
                 if (value & 0x80) {
                     // Write to register
                     let register = value & 0x7;
                     this.registers[register] = this.latchedData;
+                    console.log(`register: ${register} = ${this.registers[register].toString(16)}`);
                 } else if (value & 0x40) {
                     // Setup video write address
-                    this.vramAddress = (value & 0x3f) << 8 + this.latchedData;
+                    this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
+                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value & 0x3f} ${this.latchedData}`);
                 } else {
                     // Setup video write address
-                    this.vramAddress = (value & 0x3f) << 8 + this.latchedData;
+                    this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
+                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value & 0x3f} ${this.latchedData}`);
                 }
             }
         } else {
-            this.hasLatchedData = true;
+            this.hasLatchedData = false;
             // Mode = 0 means writing to video memory
             this.vram[this.vramAddress] = value;
-            this.vramAddress = (this.vramAddress + 1) % 16384;
+            this.vramAddress = (this.vramAddress + 1) % 0x4000;
         }
     }
 
@@ -124,6 +150,46 @@ export class TMS9918 {
 
         if (this.vdpStatus & StatusFlags.S_INT) {
             this.interruptFunction();
+        }
+    }
+
+    render(image: Uint8ClampedArray) {
+        for (let i = 0; i < image.length; i++) {
+            image[i] = 0xff;
+        }
+        // console.log(`Mode ${this.Mode()}`);
+        // console.log(`PG ${this.getPatternGenerationTable()}`);
+        // console.log(`PN ${this.getPatternNameTable()}`);
+        //console.clear();
+        // console.log('--------------')
+        if (this.Mode() == 1) {
+            let PG = this.getPatternGenerationTable();
+            let PN = this.getPatternNameTable();
+            let TC = this.getTextColor();
+            let BD = this.getBackdropColor();
+
+            for (let y = 0; y < 24; y++) {                
+                for (let x = 0; x < 40; x++) {
+                    let char = this.vram[PN + y * 40 + x];
+                    
+                }                
+            }
+        }
+
+        if (this.Mode() == 0) {
+            let PG = this.getPatternGenerationTable();
+            let PN = this.getPatternNameTable();
+            let TC = this.getTextColor();
+            let BD = this.getBackdropColor();
+            let row = "";
+            for (let y = 0; y < 24; y++) {                
+                for (let x = 0; x < 32; x++) {
+                    let char = this.vram[PN + y * 40 + x];
+                   if (char) row += String.fromCharCode(char);
+                }                
+            }
+
+            if (row.length) console.log(row);
         }
     }
 }
