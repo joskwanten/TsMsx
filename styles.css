@@ -105,8 +105,9 @@ body {
 }
 
 #screen {
-    width: 212px;
-    height: 192px;
+    width: 512px;
+    height: 424px;
+    margin: auto;
 }
 
 .footer {

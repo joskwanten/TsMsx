@@ -14,7 +14,7 @@ function wait(ms: number) {
 }
 
 let z80: Z80 | null = null;
-let vdp = new TMS9918(() => z80?.interrupt());
+let vdp = new TMS9918(() => z80?.interrupt(), (n) => {});
 
 async function reset() {
     let response = await fetch('testfiles/z80doc.bin');

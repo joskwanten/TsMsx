@@ -35,23 +35,23 @@ export class TMS9918 {
     latchedData = 0;
 
     palette = [[0x00, 0x00, 0x00, 0x00],
-    [0x00, 0x00, 0x00, 0x01],
-    [0x21, 0xc8, 0x42, 0x01],
-    [0x5e, 0xdc, 0x78, 0x01],
-    [0x54, 0x55, 0xed, 0x01],
-    [0x7d, 0x76, 0xfc, 0x01],
-    [0xd4, 0x52, 0x4d, 0x01],
-    [0x42, 0xeb, 0xf5, 0x01],
-    [0xfc, 0x55, 0x54, 0x01],
-    [0xff, 0x79, 0x78, 0x01],
-    [0xd4, 0xc1, 0x54, 0x01],
-    [0xe6, 0xce, 0x80, 0x01],
-    [0x21, 0xb0, 0x3b, 0x01],
-    [0xc9, 0x5b, 0xba, 0x01],
-    [0xcc, 0xcc, 0xcc, 0x01],
-    [0xff, 0xff, 0xff, 0x01]]
+    [0x00, 0x00, 0x00, 0xff],
+    [0x21, 0xc8, 0x42, 0xff],
+    [0x5e, 0xdc, 0x78, 0xff],
+    [0x54, 0x55, 0xed, 0xff],
+    [0x7d, 0x76, 0xfc, 0xff],
+    [0xd4, 0x52, 0x4d, 0xff],
+    [0x42, 0xeb, 0xf5, 0xff],
+    [0xfc, 0x55, 0x54, 0xff],
+    [0xff, 0x79, 0x78, 0xff],
+    [0xd4, 0xc1, 0x54, 0xff],
+    [0xe6, 0xce, 0x80, 0xff],
+    [0x21, 0xb0, 0x3b, 0xff],
+    [0xc9, 0x5b, 0xba, 0xff],
+    [0xcc, 0xcc, 0xcc, 0xff],
+    [0xff, 0xff, 0xff, 0xff]]
 
-    constructor(private interruptFunction: () => void) {
+    constructor(private interruptFunction: () => void, private backdropChangedFunc: (color: number) => void) {
 
     }
 
@@ -84,10 +84,10 @@ export class TMS9918 {
     }
 
     Mode() {
-        let m1 = (this.registers[1] & 0x10) >> 2;
+        let m1 = (this.registers[1] & 0x10) >> 4;
         let m3 = (this.registers[1] & 0x08) >> 1;
-        let m2 = (this.registers[0] & 0x02) >> 1;
-        return m1 + m2 + m3;
+        let m2 = (this.registers[0] & 0x02);
+        return (m3 | m2 | m1);
     }
 
     write(mode: boolean, value: number) {
@@ -105,26 +105,29 @@ export class TMS9918 {
                     // Write to register
                     let register = value & 0x7;
                     this.registers[register] = this.latchedData;
-                    console.log(`register: ${register} = ${this.registers[register].toString(16)}`);
-                    if (register == 2) { console.log(`Register2: ${this.getPatternNameTable()}`)}
-                    if (register == 4) { console.log(`Register4: ${this.getPatternGenerationTable()}`)}
+
+                    if (register == 7) {
+                        let c = 
+                            (this.palette[this.getBackdropColor()][0] << 24) |
+                            (this.palette[this.getBackdropColor()][1] << 16) |
+                            (this.palette[this.getBackdropColor()][2] << 8) |
+                            (this.palette[this.getBackdropColor()][3]);
+
+                        this.backdropChangedFunc(c);
+                    }
                 } else if (value & 0x40) {
                     // Setup video write address
-                    console.log(`this.vramAddress old = ${this.vramAddress.toString(16)}`);
                     this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value.toString(16)} ${this.latchedData.toString(16)}`);
                 } else {
-                    // Setup video write address
-                    console.log(`read this.vramAddress old = ${this.vramAddress.toString(16)}`);
+                    // Setup video read address (internally the same)
                     this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                    console.log(`read this.vramAddress = ${this.vramAddress.toString(16)}`);
+
                 }
             }
         } else {
             this.hasLatchedData = false;
             // Mode = 0 means writing to video memory
             this.vram[this.vramAddress] = value;
-            console.log(`${this.vramAddress.toString(16)}:${value.toString(16)}`);
             this.vramAddress = (this.vramAddress + 1) % 0x4000;
         }
     }
@@ -159,24 +162,42 @@ export class TMS9918 {
     }
 
     render(image: Uint8ClampedArray) {
-        for (let i = 0; i < image.length; i++) {
-            image[i] = 0xff;
+        let c = this.getBackdropColor();
+        for (let i = 0; i < image.length / 4; i++) {
+            image[(4 * i) + 0] = this.palette[c][0];
+            image[(4 * i) + 1] = this.palette[c][1];
+            image[(4 * i) + 2] = this.palette[c][2];
+            image[(4 * i) + 3] = this.palette[c][3];
         }
-        // console.log(`Mode ${this.Mode()}`);
-        // console.log(`PG ${this.getPatternGenerationTable()}`);
-        // console.log(`PN ${this.getPatternNameTable()}`);
-        //console.clear();
-        // console.log('--------------')
+
+        // Screen 0
         if (this.Mode() == 1) {
             let PG = this.getPatternGenerationTable();
             let PN = this.getPatternNameTable();
-            let TC = this.getTextColor();
-            let BD = this.getBackdropColor();
-
             for (let y = 0; y < 24; y++) {                
                 for (let x = 0; x < 40; x++) {
-                    let char = this.vram[PN + (y * 40) + x];
-                    
+                    let index = (y * 40) + x;
+                    // Get Pattern name
+                    let char = this.vram[PN + index];
+                    // Get Colors from the Color table
+                    let fg = this.getTextColor();
+                    let bg = this.getBackdropColor();
+                    for(let i = 0; i < 8; i++) {
+                        let p = this.vram[PG + (8 * char) + i];
+                        for(let j = 0; j < 6; j++) {
+                            if (p & (1 << (7 - j))) {
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[fg][0];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[fg][1];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[fg][2];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[fg][3];
+                            } else {
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[bg][0];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[bg][1];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[bg][2];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[bg][3];
+                            }
+                        }
+                    }
                 }                
             }
         }
@@ -184,17 +205,36 @@ export class TMS9918 {
         if (this.Mode() == 0) {
             let PG = this.getPatternGenerationTable();
             let PN = this.getPatternNameTable();
-            let TC = this.getTextColor();
-            let BD = this.getBackdropColor();
-            let row = "";
+            let CT = this.getColorTable();
             for (let y = 0; y < 24; y++) {                
                 for (let x = 0; x < 32; x++) {
-                    let char = this.vram[PN + (y * 40) + x];
-                   if (char) row += String.fromCharCode(char);
+                    let index = (y * 32) + x;
+                    // Get Pattern name
+                    let char = this.vram[PN + index];
+                    // Get Colors from the Color table
+                    let color = this.vram[CT + (index / 8)];
+                    let fg = color >> 4;
+                    let bg = color & 0xf;
+                    fg = 15;
+                    bg = 5;
+                    for(let i = 0; i < 8; i++) {
+                        let p = this.vram[PG + (8 * char) + i];
+                        for(let j = 0; j < 8; j++) {
+                            if (p & (1 << (7 - j))) {
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
+                            } else {
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
+                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
+                            }
+                        }
+                    }
                 }                
             }
-
-            if (row.length) console.log(row);
         }
     }
 }
