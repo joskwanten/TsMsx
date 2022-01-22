@@ -30,6 +30,10 @@ let nn_read_ind = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
 let val = this.memory.uread8(nn);`;
 
+let nn_read_ind16 = `let nn = this.memory.uread16(this.r16[PC]);
+this.r16[PC] += 2;
+let val = this.memory.uread16(nn);`;
+
 let nn_write_ind8 = `let nn = this.memory.uread16(this.r16[PC]);
 this.r16[PC] += 2;
 this.memory.uwrite8(nn, val);`;
@@ -122,7 +126,7 @@ const registersLD = {
     'nn': { type: 24, src: nn_read, dst: undefined },
     'n': { type: 8, src: 'let val = this.memory.uread8(this.r16[PC]++);', dst: undefined },
     '(n)': { type: 8, src: 'let n = this.memory.uread8(this.r16[PC]++);', dst: 'this.IO.write8(n, val);' },
-    '(nn)': { type: 8, src: nn_read_ind, dst: nn_write_ind8, dst16: nn_write_ind16 }
+    '(nn)': { type: 8, src: nn_read_ind, src16: nn_read_ind16, dst: nn_write_ind8, dst16: nn_write_ind16 }
 };
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
@@ -170,7 +174,11 @@ function generateLDOpcode(r, dst, src, opcode) {
     if (registersLD[src].direct && registersLD[dst].direct) {
         emitCode(`${registersLD[dst].direct} = ${registersLD[src].direct}`);
     } else {
-        emitCode(registersLD[src].src);
+        if (registersLD[dst].type == 16 && registersLD[src].src16) {
+            emitCode(registersLD[src].src16);
+        } else {
+            emitCode(registersLD[src].src);      
+        }
         if (src == '(n)') {
             emitCode('let val = this.IO.read8(n);');
         }

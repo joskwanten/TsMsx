@@ -106,11 +106,13 @@ export class TMS9918 {
                     let register = value & 0x7;
                     this.registers[register] = this.latchedData;
                     console.log(`register: ${register} = ${this.registers[register].toString(16)}`);
+                    if (register == 2) { console.log(`Register2: ${this.getPatternNameTable()}`)}
+                    if (register == 4) { console.log(`Register4: ${this.getPatternGenerationTable()}`)}
                 } else if (value & 0x40) {
                     // Setup video write address
                     console.log(`this.vramAddress old = ${this.vramAddress.toString(16)}`);
                     this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)}`);
+                    console.log(`this.vramAddress = ${this.vramAddress.toString(16)} ${value.toString(16)} ${this.latchedData.toString(16)}`);
                 } else {
                     // Setup video write address
                     console.log(`read this.vramAddress old = ${this.vramAddress.toString(16)}`);
@@ -122,8 +124,8 @@ export class TMS9918 {
             this.hasLatchedData = false;
             // Mode = 0 means writing to video memory
             this.vram[this.vramAddress] = value;
-            this.vramAddress = (this.vramAddress + 1) % 0x4000;
             console.log(`${this.vramAddress.toString(16)}:${value.toString(16)}`);
+            this.vramAddress = (this.vramAddress + 1) % 0x4000;
         }
     }
 
