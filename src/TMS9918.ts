@@ -33,6 +33,7 @@ export class TMS9918 {
 
     hasLatchedData = false;
     latchedData = 0;
+    renderedImage = new Uint8ClampedArray(256 * 212 * 4);
 
     palette = [[0x00, 0x00, 0x00, 0x00],
     [0x00, 0x00, 0x00, 0xff],
@@ -53,6 +54,10 @@ export class TMS9918 {
 
     constructor(private interruptFunction: () => void, private backdropChangedFunc: (color: number) => void) {
 
+    }
+
+    getBlank() {
+        return (this.registers[1] & 0x40) !== 0x40;
     }
 
     getSprintAttributeTable() {
@@ -93,21 +98,21 @@ export class TMS9918 {
     write(mode: boolean, value: number) {
         if (mode) {
             if (!this.hasLatchedData) {
-                
+
                 this.latchedData = value;
                 this.hasLatchedData = true;
 
             } else {
-                
+
                 this.hasLatchedData = false;
-                
+
                 if (value & 0x80) {
                     // Write to register
                     let register = value & 0x7;
                     this.registers[register] = this.latchedData;
 
                     if (register == 7) {
-                        let c = 
+                        let c =
                             (this.palette[this.getBackdropColor()][0] << 24) |
                             (this.palette[this.getBackdropColor()][1] << 16) |
                             (this.palette[this.getBackdropColor()][2] << 8) |
@@ -149,6 +154,7 @@ export class TMS9918 {
     checkAndGenerateInterrupt(time: number) {
         if ((time - this.lastRefresh) > this.refreshRate) {
             this.lastRefresh = time;
+            this.render(this.renderedImage);
 
             //  IF interrupts are enabled set the S_INT flag
             if (this.GINT()) {
@@ -170,11 +176,13 @@ export class TMS9918 {
             image[(4 * i) + 3] = this.palette[c][3];
         }
 
-        // Screen 0
-        if (this.Mode() == 1) {
+        if (this.getBlank()) {
+            //  Blank done
+        } else if (this.Mode() == 1) {
+            // Screen 0
             let PG = this.getPatternGenerationTable();
             let PN = this.getPatternNameTable();
-            for (let y = 0; y < 24; y++) {                
+            for (let y = 0; y < 24; y++) {
                 for (let x = 0; x < 40; x++) {
                     let index = (y * 40) + x;
                     // Get Pattern name
@@ -182,9 +190,9 @@ export class TMS9918 {
                     // Get Colors from the Color table
                     let fg = this.getTextColor();
                     let bg = this.getBackdropColor();
-                    for(let i = 0; i < 8; i++) {
+                    for (let i = 0; i < 8; i++) {
                         let p = this.vram[PG + (8 * char) + i];
-                        for(let j = 0; j < 6; j++) {
+                        for (let j = 0; j < 6; j++) {
                             if (p & (1 << (7 - j))) {
                                 image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[fg][0];
                                 image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[fg][1];
@@ -198,15 +206,13 @@ export class TMS9918 {
                             }
                         }
                     }
-                }                
+                }
             }
-        }
-
-        if (this.Mode() == 0) {
+        } else if (this.Mode() == 0) {
             let PG = this.getPatternGenerationTable();
             let PN = this.getPatternNameTable();
             let CT = this.getColorTable();
-            for (let y = 0; y < 24; y++) {                
+            for (let y = 0; y < 24; y++) {
                 for (let x = 0; x < 32; x++) {
                     let index = (y * 32) + x;
                     // Get Pattern name
@@ -217,9 +223,9 @@ export class TMS9918 {
                     let bg = color & 0xf;
                     fg = 15;
                     bg = 5;
-                    for(let i = 0; i < 8; i++) {
+                    for (let i = 0; i < 8; i++) {
                         let p = this.vram[PG + (8 * char) + i];
-                        for(let j = 0; j < 8; j++) {
+                        for (let j = 0; j < 8; j++) {
                             if (p & (1 << (7 - j))) {
                                 image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
                                 image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
@@ -233,8 +239,12 @@ export class TMS9918 {
                             }
                         }
                     }
-                }                
+                }
             }
         }
+    }
+
+    getImage() {
+        return this.renderedImage;
     }
 }

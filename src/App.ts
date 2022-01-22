@@ -155,15 +155,18 @@ window.onload = () => {
         // Draw image data to the canvas
         ctx?.putImageData(imageData, 0, 0);
 
-        let renderRoutine = () => {
+        let screenUpdateRoutine = () => {
             // Do rendering
-            vdp.render(imageData.data);
+            let vdpOutout = vdp.getImage();
+            for(let i = 0; i < imageData.data.length; i++) {
+                imageData.data[i] = vdpOutout[i];
+            }
             ctx?.putImageData(imageData, 0, 0);
-            requestAnimationFrame(renderRoutine);
+            requestAnimationFrame(screenUpdateRoutine);
         };
         
         window.requestAnimationFrame(() => {
-            renderRoutine();
+            screenUpdateRoutine();
         });        
     }
 }
