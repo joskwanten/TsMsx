@@ -4,7 +4,7 @@ const csv = require('csv-parser')
 const fs = require('fs');
 const { emit } = require('process');
 const results = [];
-const generateLoggingCode = true;
+const generateLoggingCode = false;
 
 let mnemonic = /(?<opcode>\w+)( )?(?<operand>(\()?\w+(\+o)?(\))?)?(,?)(?<operand2>(\()?\w+(\+o)?([\),'])?)?$/
 let indirect = /\((?<reg>(\w+)(\+o)?)\)/

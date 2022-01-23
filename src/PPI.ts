@@ -11,7 +11,7 @@ export class PPI {
 
     constructor() {
         this.keyboardRow = 0;
-        this.keyboardState = new Array(11).fill(false).map(() => new Array(8).fill(false));
+        this.keyboardState = new Array(16).fill(false).map(() => new Array(8).fill(false));
         this.keyboardMatrix = [
             ['7','6','5','4','3','2','1','0'],
             [';','(','@','$','^','-','9','8'],
@@ -21,7 +21,12 @@ export class PPI {
             ['z','y','x','w','v','u','t','s'],
             ['F3','F2','F1','?Kan','CapsLock','Alt','Control','Shift'],
             ['Enter','Select','Backspace','?Stop','Tab','Escape','F5','F4'],
-            ['ArrowRight','ArrowDown','ArrowUp','ArrowLeft','Delete','?Insert','?Home','Space'],
+            ['ArrowRight','ArrowDown','ArrowUp','ArrowLeft','Delete','?Insert','?Home',' '],
+            ['','','','','','','',''],
+            ['','','','','','','',''],
+            ['','','','','','','',''],
+            ['','','','','','','',''],
+            ['','','','','','','',''],
             ['','','','','','','',''],
             ['','','','','','','',''],
         ]
@@ -31,13 +36,14 @@ export class PPI {
     readA9() {
         let result = 0;
         this.keyboardState[this.keyboardRow].forEach((k, i) => {
-            result |= k ? 1 << (7 - i) : 0;
+            result |= !k ? 1 << (7 - i) : 0;
         });
+        
         return result;
     }
 
     writeAA(val: number) {
-        this.keyboardRow = val % 11;
+        this.keyboardRow = (val & 0xf);
     }
 
     writeAB(val: number) {

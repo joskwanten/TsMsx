@@ -7,16 +7,20 @@ import { PC, Z80 } from './z80_generated';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
+import { PPI } from './PPI';
 
 
 function changeBackground(c: number) {
-    let element : any = document.querySelector('.backdrop');
+    let element: any = document.querySelector('.backdrop');
     if (element) {
-        element.style.backgroundColor = `#${c.toString(16).slice(0,6)}`;
+        let color = ('#000000' + (c >>> 8).toString(16)).slice(-6);
+        element.style.backgroundColor = color;
+        console.log(color);
     }
 }
 let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
+let ppi = new PPI();
 let debugBuffer = '';
 
 function wait(ms: number) {
@@ -54,8 +58,10 @@ async function reset() {
                     return vdp.read(true);
                 case 0xa8:
                     return slots.getSlotSelector();
+                case 0xa9:
+                    return ppi.readA9();
                 default:
-//console.log(`Port read not implemented ${address.toString(16)}`);
+                    //console.log(`Port read not implemented ${address.toString(16)}`);
                     return 0xff;
             }
         }
@@ -70,6 +76,11 @@ async function reset() {
                     break;
                 case 0xa8:
                     slots.setSlotSelector(value);
+                    break;
+                case 0xa9:
+                    break;
+                case 0xaa:
+                    ppi.writeAA(value);
                     break;
                 case 0x7d:
                     console.debug("Check program counter");
@@ -103,33 +114,19 @@ async function reset() {
 }
 
 async function run() {
-    if (!z80) {
-        return;
-    }
-
-    while (true) {
-        let lastCycles = z80.cycles;
-        let timestamp = Date.now();
-        while((z80.cycles - lastCycles) < 60000 && !z80.halted) {
-            z80.executeSingleInstruction();
-
-            if (z80.r16[PC] === 0xe0d) {
-                console.log("BREAK");
+    setInterval(() => {
+        if (z80) {
+            let lastCycles = z80.cycles;
+            while ((z80.cycles - lastCycles) < 60000) {
+                z80.executeSingleInstruction();
             }
-        }
 
-        let timeLeft = 16.67 - (Date.now() - timestamp);
-        if (timeLeft > 0) {
-            // console.log(`Left ${timeLeft}`)
-            await wait(timeLeft);
+            vdp.checkAndGenerateInterrupt(Date.now());
         }
-
-        vdp.checkAndGenerateInterrupt(Date.now());
-    }
+    }, 20);
 }
 
 reset().then(() => {
-    console.log(z80);
     run();
 });
 
@@ -138,35 +135,27 @@ window.onload = () => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx?.createImageData(256, 192);
     if (imageData) {
-        // Iterate through every pixel
-        for (let i = 0; i < imageData.data.length; i += 4) {
-            // Percentage in the x direction, times 255
-            let x = (i % 1024) / 1024 * 255;
-            // Percentage in the y direction, times 255
-            let y = Math.ceil(i / 1024) / 1024 * 255;
 
-            // Modify pixel data
-            imageData.data[i + 0] = x;        // R value
-            imageData.data[i + 1] = y;        // G value
-            imageData.data[i + 2] = 255 - x;  // B value
-            imageData.data[i + 3] = 255;      // A value
-        }
+        document.onkeydown = (event) => {
+            ppi.onKeydown(event.key);
+        };
 
-        // Draw image data to the canvas
-        ctx?.putImageData(imageData, 0, 0);
+        document.onkeyup = (event) => {
+            ppi.onKeyup(event.key);
+        };
 
         let screenUpdateRoutine = () => {
             // Do rendering
             let vdpOutout = vdp.getImage();
-            for(let i = 0; i < imageData.data.length; i++) {
+            for (let i = 0; i < imageData.data.length; i++) {
                 imageData.data[i] = vdpOutout[i];
             }
             ctx?.putImageData(imageData, 0, 0);
             requestAnimationFrame(screenUpdateRoutine);
         };
-        
+
         window.requestAnimationFrame(() => {
             screenUpdateRoutine();
-        });        
+        });
     }
 }
