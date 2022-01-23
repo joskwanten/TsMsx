@@ -42,8 +42,8 @@ async function reset() {
     gameMemory.forEach((b, i) => gameMemory[i] = game[i % game.length]);
 
     let slot0 = new Rom(biosMemory);
-    // let slot1 = new EmptySlot();
-    let slot1 = new Rom(gameMemory);
+    let slot1 = new EmptySlot();
+   // let slot1 = new Rom(gameMemory);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);

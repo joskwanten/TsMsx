@@ -176,7 +176,7 @@ export class TMS9918 {
 
     render(image: Uint32Array) {
         let c = this.getBackdropColor();
-        for (let i = 0; i < image.length / 4; i++) {
+        for (let i = 0; i < image.length; i++) {
             image[i] = this.palette[c];
         }
 
@@ -206,9 +206,9 @@ export class TMS9918 {
                     let p = this.vram[PG + (8 * char) + i];
                     for (let j = 0; j < 6; j++) {
                         if (p & (1 << (7 - j))) {
-                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[fg];
+                            image[(256 * ((y * 8) + i) + ((x * 6) + j))] = this.palette[fg];
                         } else {
-                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[bg];
+                            image[(256 * ((y * 8) + i) + ((x * 6) + j))] = this.palette[bg];
                         }
                     }
                 }
