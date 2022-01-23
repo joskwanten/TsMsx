@@ -69,6 +69,10 @@ export class TMS9918 {
     }
 
     getPatternGenerationTable() {
+        if (this.Mode() === 2) {
+            return (this.registers[4] & 4) << 11;
+        }
+
         return (this.registers[4] & 7) << 11;
     }
 
@@ -179,64 +183,109 @@ export class TMS9918 {
         if (this.getBlank()) {
             //  Blank done
         } else if (this.Mode() == 1) {
-            // Screen 0
-            let PG = this.getPatternGenerationTable();
-            let PN = this.getPatternNameTable();
-            for (let y = 0; y < 24; y++) {
-                for (let x = 0; x < 40; x++) {
-                    let index = (y * 40) + x;
-                    // Get Pattern name
-                    let char = this.vram[PN + index];
-                    // Get Colors from the Color table
-                    let fg = this.getTextColor();
-                    let bg = this.getBackdropColor();
-                    for (let i = 0; i < 8; i++) {
-                        let p = this.vram[PG + (8 * char) + i];
-                        for (let j = 0; j < 6; j++) {
-                            if (p & (1 << (7 - j))) {
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[fg][0];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[fg][1];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[fg][2];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[fg][3];
-                            } else {
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[bg][0];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[bg][1];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[bg][2];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[bg][3];
-                            }
+            this.renderScreen0(image);
+        } else if (this.Mode() == 0) {
+            this.renderScreen1(image);
+        } else if (this.Mode() == 2) {
+            this.renderScreen2(image);
+        }
+    }
+
+    private renderScreen0(image: Uint8ClampedArray) {
+        let PG = this.getPatternGenerationTable();
+        let PN = this.getPatternNameTable();
+        for (let y = 0; y < 24; y++) {
+            for (let x = 0; x < 40; x++) {
+                let index = (y * 40) + x;
+                // Get Pattern name
+                let char = this.vram[PN + index];
+                // Get Colors from the Color table
+                let fg = this.getTextColor();
+                let bg = this.getBackdropColor();
+                for (let i = 0; i < 8; i++) {
+                    let p = this.vram[PG + (8 * char) + i];
+                    for (let j = 0; j < 6; j++) {
+                        if (p & (1 << (7 - j))) {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[fg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[fg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[fg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[fg][3];
+                        } else {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[bg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[bg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[bg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[bg][3];
                         }
                     }
                 }
             }
-        } else if (this.Mode() == 0) {
-            let PG = this.getPatternGenerationTable();
-            let PN = this.getPatternNameTable();
-            let CT = this.getColorTable();
-            for (let y = 0; y < 24; y++) {
-                for (let x = 0; x < 32; x++) {
-                    let index = (y * 32) + x;
-                    // Get Pattern name
-                    let char = this.vram[PN + index];
-                    // Get Colors from the Color table
-                    let color = this.vram[CT + (index / 8)];
-                    let fg = color >> 4;
-                    let bg = color & 0xf;
-                    fg = 15;
-                    bg = 5;
-                    for (let i = 0; i < 8; i++) {
-                        let p = this.vram[PG + (8 * char) + i];
-                        for (let j = 0; j < 8; j++) {
-                            if (p & (1 << (7 - j))) {
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
-                            } else {
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
-                                image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
-                            }
+        }
+    }
+
+    private renderScreen1(image: Uint8ClampedArray) {
+        let PG = this.getPatternGenerationTable();
+        let PN = this.getPatternNameTable();
+        let CT = this.getColorTable();
+        for (let y = 0; y < 24; y++) {
+            for (let x = 0; x < 32; x++) {
+                let index = (y * 32) + x;
+                // Get Pattern name
+                let char = this.vram[PN + index];
+                // Get Colors from the Color table
+                let color = this.vram[CT + (index / 8)];
+                let fg = color >> 4;
+                let bg = color & 0xf;
+                fg = 15;
+                bg = 5;
+                for (let i = 0; i < 8; i++) {
+                    let p = this.vram[PG + (8 * char) + i];
+                    for (let j = 0; j < 8; j++) {
+                        if (p & (1 << (7 - j))) {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
+                        } else {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private renderScreen2(image: Uint8ClampedArray) {
+        let PG = this.getPatternGenerationTable();
+        let PN = this.getPatternNameTable();
+        let CT = this.getColorTable();
+        for (let y = 0; y < 24; y++) {
+            for (let x = 0; x < 32; x++) {
+                let index = (y * 32) + x;
+                let table = y >> 3;
+                // Get Pattern name
+                let char = this.vram[PN + index];
+                // Get Colors from the Color table
+                let color = this.vram[CT + (table * 256) + (index / 8)];
+                let fg = color >> 4;
+                let bg = color & 0xf;
+                fg = 15;
+                bg = 5;
+                for (let i = 0; i < 8; i++) {
+                    let p = this.vram[PG + (table * 256 * 8) + (8 * char) + i];
+                    for (let j = 0; j < 8; j++) {
+                        if (p & (1 << (7 - j))) {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
+                        } else {
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
+                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
                         }
                     }
                 }

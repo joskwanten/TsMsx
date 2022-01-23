@@ -35,15 +35,15 @@ async function reset() {
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    // response = await fetch('SCOBRA.ROM');
-    // buffer = await response.arrayBuffer();
-    // let game  = new Uint8Array(buffer);
-    // let gameMemory = new Uint8Array(0x10000);
-    // game.forEach((b, i) => gameMemory[i] = b);
+    response = await fetch('SCOBRA.ROM');
+    buffer = await response.arrayBuffer();
+    let game  = new Uint8Array(buffer);
+    let gameMemory = new Uint8Array(0x10000);
+    gameMemory.forEach((b, i) => gameMemory[i] = game[i % game.length]);
 
     let slot0 = new Rom(biosMemory);
-    let slot1 = new EmptySlot();
-    //let slot1 = new Rom(gameMemory);
+    // let slot1 = new EmptySlot();
+    let slot1 = new Rom(gameMemory);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
