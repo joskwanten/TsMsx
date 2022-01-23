@@ -12,6 +12,8 @@ Reg/Bit	7	    6	    5	    4	    3	    2	    1	    0
 Status  INT	    5S	    C   	FS4	    FS3	    FS2	    FS1	    FS0
 */
 
+import { isUint32Array } from "util/types";
+
 enum StatusFlags {
     S_INT = 0b10000000,
     S_5S = 0b01000000,
@@ -33,24 +35,26 @@ export class TMS9918 {
 
     hasLatchedData = false;
     latchedData = 0;
-    renderedImage = new Uint8ClampedArray(256 * 212 * 4);
+    renderedImage = new Uint32Array(256 * 212);
 
-    palette = [[0x00, 0x00, 0x00, 0x00],
-    [0x00, 0x00, 0x00, 0xff],
-    [0x21, 0xc8, 0x42, 0xff],
-    [0x5e, 0xdc, 0x78, 0xff],
-    [0x54, 0x55, 0xed, 0xff],
-    [0x7d, 0x76, 0xfc, 0xff],
-    [0xd4, 0x52, 0x4d, 0xff],
-    [0x42, 0xeb, 0xf5, 0xff],
-    [0xfc, 0x55, 0x54, 0xff],
-    [0xff, 0x79, 0x78, 0xff],
-    [0xd4, 0xc1, 0x54, 0xff],
-    [0xe6, 0xce, 0x80, 0xff],
-    [0x21, 0xb0, 0x3b, 0xff],
-    [0xc9, 0x5b, 0xba, 0xff],
-    [0xcc, 0xcc, 0xcc, 0xff],
-    [0xff, 0xff, 0xff, 0xff]]
+    palette = [
+        0x00000000,
+        0x000000ff,
+        0x21c842ff,
+        0x5edc78ff,
+        0x5455edff,
+        0x7d76fcff,
+        0xd4524dff,
+        0x42ebf5ff,
+        0xfc5554ff,
+        0xff7978ff,
+        0xd4c154ff,
+        0xe6ce80ff,
+        0x21b03bff,
+        0xc95bbaff,
+        0xccccccff,
+        0xffffffff
+    ];
 
     constructor(private interruptFunction: () => void, private backdropChangedFunc: (color: number) => void) {
 
@@ -65,6 +69,10 @@ export class TMS9918 {
     }
 
     getColorTable() {
+        if (this.Mode() === 2) {
+            return (this.registers[3] & 0x80) << 6;
+        }
+
         return (this.registers[3]) << 6;
     }
 
@@ -116,12 +124,7 @@ export class TMS9918 {
                     this.registers[register] = this.latchedData;
 
                     if (register == 7) {
-                        let c =
-                            (this.palette[this.getBackdropColor()][0] << 24) |
-                            (this.palette[this.getBackdropColor()][1] << 16) |
-                            (this.palette[this.getBackdropColor()][2] << 8) |
-                            (this.palette[this.getBackdropColor()][3]);
-
+                        let c = this.palette[this.getBackdropColor()];
                         this.backdropChangedFunc(c);
                     }
                 } else if (value & 0x40) {
@@ -156,7 +159,7 @@ export class TMS9918 {
     }
 
     checkAndGenerateInterrupt(time: number) {
-        if ((time - this.lastRefresh) > this.refreshRate) {
+        //if ((time - this.lastRefresh) > this.refreshRate) {
             this.lastRefresh = time;
             this.render(this.renderedImage);
 
@@ -164,20 +167,17 @@ export class TMS9918 {
             if (this.GINT()) {
                 this.vdpStatus |= StatusFlags.S_INT;
             }
-        }
+        //}
 
         if (this.vdpStatus & StatusFlags.S_INT) {
             this.interruptFunction();
         }
     }
 
-    render(image: Uint8ClampedArray) {
+    render(image: Uint32Array) {
         let c = this.getBackdropColor();
         for (let i = 0; i < image.length / 4; i++) {
-            image[(4 * i) + 0] = this.palette[c][0];
-            image[(4 * i) + 1] = this.palette[c][1];
-            image[(4 * i) + 2] = this.palette[c][2];
-            image[(4 * i) + 3] = this.palette[c][3];
+            image[i] = this.palette[c];
         }
 
         if (this.getBlank()) {
@@ -191,7 +191,7 @@ export class TMS9918 {
         }
     }
 
-    private renderScreen0(image: Uint8ClampedArray) {
+    private renderScreen0(image: Uint32Array) {
         let PG = this.getPatternGenerationTable();
         let PN = this.getPatternNameTable();
         for (let y = 0; y < 24; y++) {
@@ -206,15 +206,9 @@ export class TMS9918 {
                     let p = this.vram[PG + (8 * char) + i];
                     for (let j = 0; j < 6; j++) {
                         if (p & (1 << (7 - j))) {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[fg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[fg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[fg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[fg][3];
+                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[fg];
                         } else {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 0] = this.palette[bg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 1] = this.palette[bg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 2] = this.palette[bg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 6) + j))) + 3] = this.palette[bg][3];
+                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[bg];
                         }
                     }
                 }
@@ -222,7 +216,7 @@ export class TMS9918 {
         }
     }
 
-    private renderScreen1(image: Uint8ClampedArray) {
+    private renderScreen1(image: Uint32Array) {
         let PG = this.getPatternGenerationTable();
         let PN = this.getPatternNameTable();
         let CT = this.getColorTable();
@@ -232,24 +226,16 @@ export class TMS9918 {
                 // Get Pattern name
                 let char = this.vram[PN + index];
                 // Get Colors from the Color table
-                let color = this.vram[CT + (index / 8)];
-                let fg = color >> 4;
+                let color = this.vram[CT + (char >>> 3)];
+                let fg = color >>> 4;
                 let bg = color & 0xf;
-                fg = 15;
-                bg = 5;
                 for (let i = 0; i < 8; i++) {
                     let p = this.vram[PG + (8 * char) + i];
                     for (let j = 0; j < 8; j++) {
                         if (p & (1 << (7 - j))) {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
+                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[fg];
                         } else {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
+                            image[(256 * ((y * 8) + i) + ((x * 8) + j))] = this.palette[bg];
                         }
                     }
                 }
@@ -257,37 +243,32 @@ export class TMS9918 {
         }
     }
 
-    private renderScreen2(image: Uint8ClampedArray) {
+    private renderScreen2(image: Uint32Array) {
         let PG = this.getPatternGenerationTable();
         let PN = this.getPatternNameTable();
         let CT = this.getColorTable();
+        let mask = (this.registers[4] & 3) << 8;
         for (let y = 0; y < 24; y++) {
             for (let x = 0; x < 32; x++) {
                 let index = (y * 32) + x;
-                let table = y >> 3;
+                let table = (index & mask) >> 8;
                 // Get Pattern name
                 let char = this.vram[PN + index];
-                // Get Colors from the Color table
-                let color = this.vram[CT + (table * 256) + (index / 8)];
-                let fg = color >> 4;
-                let bg = color & 0xf;
-                fg = 15;
-                bg = 5;
+                let offset = (table * 256 * 8) + (8 * char);
                 for (let i = 0; i < 8; i++) {
-                    let p = this.vram[PG + (table * 256 * 8) + (8 * char) + i];
-                    for (let j = 0; j < 8; j++) {
-                        if (p & (1 << (7 - j))) {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[fg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[fg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[fg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[fg][3];
-                        } else {
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 0] = this.palette[bg][0];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 1] = this.palette[bg][1];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 2] = this.palette[bg][2];
-                            image[(4 * (256 * ((y * 8) + i) + ((x * 8) + j))) + 3] = this.palette[bg][3];
-                        }
-                    }
+                    let p = this.vram[PG + offset + i];
+                    let c = this.vram[CT + offset + i];
+                    let fg = c >>> 4;
+                    let bg = c & 0xf;  
+                    let imgIndex = 256 * ((y * 8) + i) + ((x * 8));                            
+                    image[imgIndex + 0] = p  & 0x80 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 1] = p  & 0x40 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 2] = p  & 0x20 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 3] = p  & 0x10 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 4] = p  & 0x08 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 5] = p  & 0x04 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 6] = p  & 0x02 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 7] = p  & 0x01 ? this.palette[fg] : this.palette[bg];
                 }
             }
         }

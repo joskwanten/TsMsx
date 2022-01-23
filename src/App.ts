@@ -35,7 +35,7 @@ async function reset() {
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('SCOBRA.ROM');
+    response = await fetch('PIPPOLS.ROM');
     buffer = await response.arrayBuffer();
     let game  = new Uint8Array(buffer);
     let gameMemory = new Uint8Array(0x10000);
@@ -123,7 +123,7 @@ async function run() {
 
             vdp.checkAndGenerateInterrupt(Date.now());
         }
-    }, 20);
+    }, 17);
 }
 
 reset().then(() => {
@@ -135,7 +135,7 @@ window.onload = () => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx?.createImageData(256, 192);
     if (imageData) {
-
+        //const view = new DataView(imageData.data.buffer);
         document.onkeydown = (event) => {
             ppi.onKeydown(event.key);
         };
@@ -147,15 +147,20 @@ window.onload = () => {
         let screenUpdateRoutine = () => {
             // Do rendering
             let vdpOutout = vdp.getImage();
-            for (let i = 0; i < imageData.data.length; i++) {
-                imageData.data[i] = vdpOutout[i];
+            for (let i = 0; i < vdpOutout.length; i++) {
+                imageData.data[4 * i + 0] = 0xff & (vdpOutout[i] >>> 24);
+                imageData.data[4 * i + 1] = 0xff & (vdpOutout[i] >>> 16);
+                imageData.data[4 * i + 2] = 0xff & (vdpOutout[i] >>> 8);
+                imageData.data[4 * i + 3] = 0xff & vdpOutout[i];
+                //view.setUint32(i, vdpOutout[i]); // light blue (#80d7ff)
             }
+            //view.setUint32(1500, 0xff00ffff);
             ctx?.putImageData(imageData, 0, 0);
             requestAnimationFrame(screenUpdateRoutine);
         };
 
-        window.requestAnimationFrame(() => {
-            screenUpdateRoutine();
-        });
+        //setInterval(screenUpdateRoutine, 20);
+
+        window.requestAnimationFrame(screenUpdateRoutine);
     }
 }
