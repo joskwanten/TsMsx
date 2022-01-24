@@ -17,6 +17,7 @@ body {
     display: flex;
     flex-direction: column;
     margin: 0;
+    position: relative;
 }
 
 .header {
@@ -125,4 +126,14 @@ body {
     border-style: solid;
     border-color: transparent;
     border-top-color: #888;
+}
+
+#sound {
+    position: absolute;
+    background-color:rgba(0,0,0,0.0);
+    height: 32px;
+    color: rgba(255.0, 255, 255, .5 );
+    top:8px;
+    right:0px;
+    border: none;
 }
