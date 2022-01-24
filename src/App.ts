@@ -16,7 +16,6 @@ function changeBackground(c: number) {
     if (element) {
         let color = ('#000000' + (c >>> 8).toString(16)).slice(-6);
         element.style.backgroundColor = color;
-        console.log(color);
     }
 }
 let z80: Z80 | null = null;
@@ -57,11 +56,12 @@ async function reset() {
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('PIPPOLS.ROM');
+    response = await fetch('GOONIES.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let gameMemory = new Uint8Array(0x10000);
-    gameMemory.forEach((b, i) => gameMemory[i] = game[i % game.length]);
+    gameMemory.forEach((b, i) => gameMemory[i] = 0);
+    game.forEach((g, i) => gameMemory[i + 0x4000] = g);
 
     let slot0 = new Rom(biosMemory);
     //let slot1 = new EmptySlot();
@@ -158,7 +158,7 @@ async function run() {
 
             vdp.checkAndGenerateInterrupt(Date.now());
         }
-    }, 17);
+    }, 16.67);
 }
 
 reset().then(() => {
@@ -203,7 +203,7 @@ window.onload = () => {
             var AudioContext = window.AudioContext;
             var audioContext = new AudioContext();
 
-            var audioNode = audioContext.createScriptProcessor(1024, 0, 2);
+            var audioNode = audioContext.createScriptProcessor(512, 0, 2);
             audioNode.onaudioprocess = fillBuffer;
             audioNode.connect(audioContext.destination);
             soundButton?.setAttribute("style", "display:none;");

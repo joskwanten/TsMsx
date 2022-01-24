@@ -13,6 +13,7 @@ Status  INT	    5S	    C   	FS4	    FS3	    FS2	    FS1	    FS0
 */
 
 import { isUint32Array } from "util/types";
+import { F } from "./z80_generated";
 
 enum StatusFlags {
     S_INT = 0b10000000,
@@ -36,6 +37,7 @@ export class TMS9918 {
     hasLatchedData = false;
     latchedData = 0;
     renderedImage = new Uint32Array(256 * 212);
+    spriteDetectionBuffer = new Uint8Array(256 * 212);
 
     palette = [
         0x00000000,
@@ -68,6 +70,10 @@ export class TMS9918 {
         return (this.registers[5] & 0x7f) << 7;
     }
 
+    getSpriteGenerationTable() {
+        return (this.registers[6] & 7) << 11;
+    }
+
     getColorTable() {
         if (this.Mode() === 2) {
             return (this.registers[3] & 0x80) << 6;
@@ -94,6 +100,14 @@ export class TMS9918 {
 
     getBackdropColor() {
         return (this.registers[7]) & 0xf;
+    }
+
+    getMagnified() {
+        return (this.registers[1] & 1) !== 0;
+    }
+
+    getSixteen() {
+        return (this.registers[1] & 2) !== 0;
     }
 
     GINT() {
@@ -160,13 +174,13 @@ export class TMS9918 {
 
     checkAndGenerateInterrupt(time: number) {
         //if ((time - this.lastRefresh) > this.refreshRate) {
-            this.lastRefresh = time;
-            this.render(this.renderedImage);
+        this.lastRefresh = time;
+        this.render(this.renderedImage);
 
-            //  IF interrupts are enabled set the S_INT flag
-            if (this.GINT()) {
-                this.vdpStatus |= StatusFlags.S_INT;
-            }
+        //  IF interrupts are enabled set the S_INT flag
+        if (this.GINT()) {
+            this.vdpStatus |= StatusFlags.S_INT;
+        }
         //}
 
         if (this.vdpStatus & StatusFlags.S_INT) {
@@ -186,8 +200,10 @@ export class TMS9918 {
             this.renderScreen0(image);
         } else if (this.Mode() == 0) {
             this.renderScreen1(image);
+            this.renderSprites(image);
         } else if (this.Mode() == 2) {
             this.renderScreen2(image);
+            this.renderSprites(image);
         }
     }
 
@@ -259,16 +275,88 @@ export class TMS9918 {
                     let p = this.vram[PG + offset + i];
                     let c = this.vram[CT + offset + i];
                     let fg = c >>> 4;
-                    let bg = c & 0xf;  
-                    let imgIndex = 256 * ((y * 8) + i) + ((x * 8));                            
-                    image[imgIndex + 0] = p  & 0x80 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 1] = p  & 0x40 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 2] = p  & 0x20 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 3] = p  & 0x10 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 4] = p  & 0x08 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 5] = p  & 0x04 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 6] = p  & 0x02 ? this.palette[fg] : this.palette[bg];
-                    image[imgIndex + 7] = p  & 0x01 ? this.palette[fg] : this.palette[bg];
+                    let bg = c & 0xf;
+                    let imgIndex = 256 * ((y * 8) + i) + ((x * 8));
+                    image[imgIndex + 0] = p & 0x80 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 1] = p & 0x40 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 2] = p & 0x20 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 3] = p & 0x10 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 4] = p & 0x08 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 5] = p & 0x04 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 6] = p & 0x02 ? this.palette[fg] : this.palette[bg];
+                    image[imgIndex + 7] = p & 0x01 ? this.palette[fg] : this.palette[bg];
+                }
+            }
+        }
+    }
+
+    private renderSprites(image: Uint32Array) {
+        // Clear collision detection buffer
+        for (let i = 0; i < this.spriteDetectionBuffer.length; i++) {
+            this.spriteDetectionBuffer[i] = 0;
+        }
+
+        let SA = this.getSprintAttributeTable();
+        let SG = this.getSpriteGenerationTable();
+
+        for (let i = 0; i < 32; i++) {
+            let y = this.vram[SA + (4 * i)];
+            let x = this.vram[SA + (4 * i) + 1];
+            let p = this.vram[SA + (4 * i) + 2];
+            let c = this.vram[SA + (4 * i) + 3] & 0xf;
+            let ec = (this.vram[SA + (4 * i) + 3] & 0x80) !== 0;
+
+            // According to Sean Young its TMS9918 document
+            // thie early clock flag will shift the x position
+            // by 32 pixels
+            if (ec) {
+                x += 32;
+            }
+
+            if (y === 208) {
+                // End of sprite attribute table
+                break;
+            }
+
+            // Special meaning of the Y position
+            // we use 0,0 as origin (top, left) and negative
+            // values for offscreen. The TMS9918 uses line 255
+            // as zero and 0 as 1, so therefore we substract 255-y
+            // if value is bigger then 238 (still a line is rendered in case of 16x16)
+            if (y > 238) {
+                y = 0 - (255 - y);
+            } else {
+                y += 1;
+            }
+
+            // Get the sprite pattern
+            if (this.getSixteen()) {
+                for (let i = 0; i < 32; i++) {
+                    let sy = (i > 7 && i < 16) || (i > 23) ? 8 : 0;
+                    let sx = (i > 15) ? 8 : 0;
+                    let s = this.vram[SG + (8 * (p & 0xfc)) + i];
+                    for (let j = 0; j < 8; j++) {
+                        if (s & (1 << (7 - j))) {
+                            let ypos = y + sy + (i % 8);
+                            let xpos = x + sx + j;
+                            if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
+                                image[(256 * ypos) + xpos] = this.palette[c];
+                            }
+                        }
+                    }
+                }
+            } else {
+                for (let i = 0; i < 8; i++) {
+                    let s = this.vram[SG + (8 * p) + i];
+                    for (let j = 0; j < 8; j++) {
+                        if (s & (1 << (7 - j))) {
+                            let ypos = y + i;
+                            let xpos = x + j;
+                            if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
+                                image[(256 * ypos) + xpos] = this.palette[c];
+                            }
+                        }
+                    }
                 }
             }
         }
