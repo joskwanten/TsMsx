@@ -1,3 +1,4 @@
+import { AY_3_8910 } from './AY-3-8910';
 import { TMS9918 } from './TMS9918';
 import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
@@ -21,6 +22,27 @@ function changeBackground(c: number) {
 let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
+let ay3 = new AY_3_8910();
+
+ay3.configure(true, 1750000, 44100);
+ay3.setPan(0, 0.5, false);
+ay3.setPan(1, 0.5, false);
+ay3.setPan(2, 0.5, false);
+
+var isrCounter = 0;
+let fillBuffer = function (e: any) {
+    var left = e.outputBuffer.getChannelData(0);
+    var right = e.outputBuffer.getChannelData(1);
+    for (var i = 0; i < left.length; i++) {
+        ay3.process();
+        ay3.removeDC();
+        left[i] = ay3.left;
+        right[i] = ay3.right;
+    }
+
+    return true;
+}
+
 let debugBuffer = '';
 
 function wait(ms: number) {
@@ -37,25 +59,30 @@ async function reset() {
 
     response = await fetch('PIPPOLS.ROM');
     buffer = await response.arrayBuffer();
-    let game  = new Uint8Array(buffer);
+    let game = new Uint8Array(buffer);
     let gameMemory = new Uint8Array(0x10000);
     gameMemory.forEach((b, i) => gameMemory[i] = game[i % game.length]);
 
     let slot0 = new Rom(biosMemory);
-    let slot1 = new EmptySlot();
-   // let slot1 = new Rom(gameMemory);
+    //let slot1 = new EmptySlot();
+    let slot1 = new Rom(gameMemory);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
 
     let buf = "";
     class IoBus implements IO {
+        psgRegister = 0;
+        psgRegisters = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
         read8(address: number): number {
             switch (address) {
                 case 0x98:
                     return vdp.read(false);
                 case 0x99:
                     return vdp.read(true);
+                case 0xa02:
+                    return this.psgRegisters[this.psgRegister];
                 case 0xa8:
                     return slots.getSlotSelector();
                 case 0xa9:
@@ -65,6 +92,7 @@ async function reset() {
                     return 0xff;
             }
         }
+
         write8(address: number, value: number): void {
             switch (address) {
                 case 0x98:
@@ -73,6 +101,13 @@ async function reset() {
                 case 0x99:
                     //console.log(`vdp write 0x${value.toString(16)}`);
                     vdp.write(true, value);
+                    break;
+                case 0xa0:
+                    this.psgRegister = value;
+                    break;
+                case 0xa1:
+                    this.psgRegisters[this.psgRegister] = value;
+                    ay3.updateState(this.psgRegisters);
                     break;
                 case 0xa8:
                     slots.setSlotSelector(value);
@@ -162,5 +197,16 @@ window.onload = () => {
         //setInterval(screenUpdateRoutine, 20);
 
         window.requestAnimationFrame(screenUpdateRoutine);
+
+        let soundButton = document.querySelector('#sound');
+        soundButton?.addEventListener('click', async (e) => {
+            var AudioContext = window.AudioContext;
+            var audioContext = new AudioContext();
+
+            var audioNode = audioContext.createScriptProcessor(1024, 0, 2);
+            audioNode.onaudioprocess = fillBuffer;
+            audioNode.connect(audioContext.destination);
+            soundButton?.setAttribute("style", "display:none;");
+        });
     }
 }
