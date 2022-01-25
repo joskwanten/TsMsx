@@ -1,3 +1,4 @@
+import { KonamiMegaRom } from './KonamiMegaRom';
 import { AY_3_8910 } from './AY-3-8910';
 import { TMS9918 } from './TMS9918';
 import { SubSlotSelector } from './SubSlotSelector';
@@ -56,16 +57,21 @@ async function reset() {
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('GOONIES.ROM');
+    response = await fetch('games/QBERT.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let gameMemory = new Uint8Array(0x10000);
     gameMemory.forEach((b, i) => gameMemory[i] = 0);
     game.forEach((g, i) => gameMemory[i + 0x4000] = g);
 
+    // response = await fetch('games/PENGUIN.ROM');
+    // buffer = await response.arrayBuffer();
+    // let game = new Uint8Array(buffer);
+
     let slot0 = new Rom(biosMemory);
     //let slot1 = new EmptySlot();
     let slot1 = new Rom(gameMemory);
+    //let slot1 = new KonamiMegaRom(game);
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
