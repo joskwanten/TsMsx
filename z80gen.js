@@ -131,7 +131,7 @@ const registersLD = {
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
 const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/ };
-const qLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'IXh', 5: 'IXl', 7: 'A' };
+const qLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IYh', 5: 'IYl'/*, 7: 'A'*/ };
 
 function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
@@ -850,7 +850,7 @@ function generateLD(row) {
             generateLDOpcode(row, dst, c[1], fillPInOpcode(opcode, p));
         });
     } else if (src.match(/q/)) {
-        Object.entries(pLookup).forEach(c => {
+        Object.entries(qLookup).forEach(c => {
             let q = c[0];
             generateLDOpcode(row, dst, c[1], fillQInOpcode(opcode, q));
         });
@@ -918,7 +918,7 @@ function generateAddSub(row) {
             generateAddSubCpOpcode(row, dst, c[1], fillPInOpcode(opcode, p));
         });
     } else if (src.match(/q/)) {
-        Object.entries(pLookup).forEach(c => {
+        Object.entries(qLookup).forEach(c => {
             let q = c[0];
             generateAddSubCpOpcode(row, dst, c[1], fillQInOpcode(opcode, q));
         });
@@ -1001,7 +1001,7 @@ function generateIncDec(row, inc) {
             generateIncDecOpcode(row, c[1], fillPInOpcodeMul(opcode, p), inc);
         });
     } else if (src.match(/q/)) {
-        Object.entries(pLookup).forEach(c => {
+        Object.entries(qLookup).forEach(c => {
             let q = c[0];
             generateIncDecOpcode(row, c[1], fillQInOpcodeMul(opcode, q), inc);
         });
@@ -1031,7 +1031,7 @@ function generateAndOrXor(row, operation) {
             generateAndOrXorOpcode(row, c[1], fillPInOpcode(opcode, p), operation);
         });
     } else if (src.match(/q/)) {
-        Object.entries(pLookup).forEach(c => {
+        Object.entries(qLookup).forEach(c => {
             let q = c[0];
             generateAndOrXorOpcode(row, c[1], fillQInOpcode(opcode, q), operation);
         });
