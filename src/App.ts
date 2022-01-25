@@ -25,7 +25,7 @@ let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
 
-ay3.configure(true, 1789772, 44100);
+ay3.configure(false, 1789772, 44100);
 ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
 ay3.setPan(2, 0.5, false);
@@ -41,11 +41,15 @@ let fillBuffer = function (e: any) {
         left[i] = ay3.left;
         right[i] = ay3.right;
 
-        // if (scc) {
-        //     let val = scc.process();
-        //     left[i] += val;
-        //     right[i] += val;
-        // }
+        if (scc) {
+            let val = scc.process();
+            left[i] += val;
+            right[i] += val;
+
+            left[i] /= 2;
+            right[i] /= 2;
+ 
+        }
     }
 
     return true;
@@ -73,7 +77,7 @@ async function reset() {
     // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
     // let slot1 = new Rom(gameMemory);
 
-    response = await fetch('games/PENGUIN.ROM');
+    response = await fetch('games/GALIOUS.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let slot1 = new KonamiMegaRomSCC(game, 44100);

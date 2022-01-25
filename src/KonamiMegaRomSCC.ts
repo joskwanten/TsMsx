@@ -5,13 +5,14 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     memorys = new Int8Array(this.memory.buffer);
     memory16 = new Uint16Array(this.memory.buffer);
     scc = new Int8Array(0xff);
+    scc_u = new Uint8Array(this.scc.buffer);
     time = 0; // Counts 44100 per second
 
     selectedPages = [0, 0, 0, 0, 0, 1, 2, 4];
     pageSize = 0x2000;
 
     getTempo(chan: number) {
-        return this.scc[0x80 + chan] + (this.scc[0x81 + chan] & 0xf) << 8;
+        return this.scc_u[0x80 + (2 * chan)] + ((this.scc_u[0x80 + (2 * chan) + 1] & 0xf) << 8);
     }
 
     getFrequency(chan: number): number {
@@ -20,7 +21,7 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     }
 
     getVolume(chan: number) {
-        if (this.scc[0x8f] & (1 << chan)) {
+        if (this.scc_u[0x8f] & (1 << chan)) {
             return this.scc[0x8A + chan] & 0xf;
         }
         return 0;
@@ -38,15 +39,15 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     process(): number {
         // Compute one sample
         let val = 0;
-        for(let chan = 0; chan < 5; chan++) {
+        for (let chan = 0; chan < 5; chan++) {
             let f = this.getFrequency(chan);
-            let step =  Math.floor((32 * f) / 44100);
-            let pos = (step * this.time) % 32;
-            val += this.getWave(chan, pos) * this.getVolume(chan);
+            let step = (32 * f) / 44100;
+            let pos = (Math.floor(step * this.time)) % 32;
+            val += this.getWave(chan > 3 ? 3 : chan, pos) * this.getVolume(chan);
         }
 
         this.time++;
-        return val / 9600; 
+        return val / 9600;
     }
 
     getLeft(): number {
@@ -77,18 +78,18 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     }
 
     uwrite8(address: number, value: number): void {
-        if (address % 0x2000 > 0x17ff) {
+        if (address % 0x2000 >= 0x1800) {
             if (this.selectedPages[(address >>> 13) % 8] == 0x3f) {
-                let reg = (address % 0x2000) - 0x1880;
+                let reg = (address % 0x2000) - 0x1800;
                 if (reg <= 255) {
                     this.scc[reg] = value;
                 }
             }
 
             return;
+        } else {
+            this.selectedPages[(address >>> 13) % 8] = value;
         }
-
-        this.selectedPages[(address >>> 13) % 8] = value;
     }
 
     uwrite16(address: number, value: number): void {

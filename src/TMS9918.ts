@@ -299,12 +299,12 @@ export class TMS9918 {
         let SA = this.getSprintAttributeTable();
         let SG = this.getSpriteGenerationTable();
 
-        for (let i = 0; i < 32; i++) {
-            let y = this.vram[SA + (4 * i)];
-            let x = this.vram[SA + (4 * i) + 1];
-            let p = this.vram[SA + (4 * i) + 2];
-            let c = this.vram[SA + (4 * i) + 3] & 0xf;
-            let ec = (this.vram[SA + (4 * i) + 3] & 0x80) !== 0;
+        for (let s = 0; s < 32; s++) {
+            let y = this.vram[SA + (4 * s)];
+            let x = this.vram[SA + (4 * s) + 1];
+            let p = this.vram[SA + (4 * s) + 2];
+            let c = this.vram[SA + (4 * s) + 3] & 0xf;
+            let ec = (this.vram[SA + (4 * s) + 3] & 0x80) !== 0;
 
             // According to Sean Young its TMS9918 document
             // thie early clock flag will shift the x position
@@ -341,6 +341,11 @@ export class TMS9918 {
                             let xpos = x + sx + j;
                             if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
                                 image[(256 * ypos) + xpos] = this.palette[c];
+                                if (this.spriteDetectionBuffer[(256 * ypos) + xpos]) {
+                                    this.vdpStatus |= StatusFlags.S_C;
+                                } else {
+                                    this.spriteDetectionBuffer[(256 * ypos) + xpos] = s + 1;
+                                }
                             }
                         }
                     }
@@ -354,6 +359,11 @@ export class TMS9918 {
                             let xpos = x + j;
                             if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
                                 image[(256 * ypos) + xpos] = this.palette[c];
+                                if (this.spriteDetectionBuffer[(256 * ypos) + xpos]) {
+                                    this.vdpStatus |= StatusFlags.S_C;
+                                } else {
+                                    this.spriteDetectionBuffer[(256 * ypos) + xpos] = s + 1;
+                                }
                             }
                         }
                     }
