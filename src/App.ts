@@ -10,6 +10,7 @@ import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
 import { PPI } from './PPI';
+import { KonamiMegaRomSCC } from './KonamiMegaRomSCC';
 
 
 function changeBackground(c: number) {
@@ -24,12 +25,13 @@ let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
 
-ay3.configure(true, 1750000, 44100);
+ay3.configure(true, 1789772, 44100);
 ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
 ay3.setPan(2, 0.5, false);
 
-var isrCounter = 0;
+let scc : SoundDevice;
+
 let fillBuffer = function (e: any) {
     var left = e.outputBuffer.getChannelData(0);
     var right = e.outputBuffer.getChannelData(1);
@@ -38,6 +40,12 @@ let fillBuffer = function (e: any) {
         ay3.removeDC();
         left[i] = ay3.left;
         right[i] = ay3.right;
+
+        // if (scc) {
+        //     let val = scc.process();
+        //     left[i] += val;
+        //     right[i] += val;
+        // }
     }
 
     return true;
@@ -68,7 +76,8 @@ async function reset() {
     response = await fetch('games/PENGUIN.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
-    let slot1 = new KonamiMegaRom(game);
+    let slot1 = new KonamiMegaRomSCC(game, 44100);
+    scc = slot1;
 
     let slot0 = new Rom(biosMemory);
     //let slot1 = new EmptySlot();
