@@ -5,7 +5,7 @@ export class KonamiMegaRom implements Memory {
     memorys = new Int8Array(this.memory.buffer);
     memory16 = new Uint16Array(this.memory.buffer);
 
-    selectedPages = [0, 1, 2, 3];
+    selectedPages = [0, 0, 0, 0, 0, 1, 2, 4];
     pageSize = 0x2000;
     /**
      *
@@ -14,34 +14,27 @@ export class KonamiMegaRom implements Memory {
 
     }
 
-    private getRealAddress(address: number): number {
-        let index = ((address - 0x4000) >>> 13);
-        if (index >= 0 && index <= 3) {
-            let page = this.selectedPages[index];
-            return (page * this.pageSize) + (address - 0x4000);
-        }
-
-        return 0;
-    }
-
     uread8(address: number): number {
-       return this.memory[this.getRealAddress(address)];
+        let pageIndex = (address >>> 13) % 8;
+        let page = this.selectedPages[pageIndex];
+        return this.memory[(page * this.pageSize) + (address % this.pageSize)];
     }
 
     read8(address: number): number {
-        return this.memorys[this.getRealAddress(address)];
+        let pageIndex = (address >>> 13) % 8;
+        let page = this.selectedPages[pageIndex];
+        return this.memorys[(page * this.pageSize) + (address % this.pageSize)];
     }
 
     uread16(address: number): number {
-        address = this.getRealAddress(address)
-        return this.memory[address] + (this.memory[address + 1] << 8);
+        let pageIndex = (address >>> 13) % 8;
+        let page = this.selectedPages[pageIndex];
+        return this.memory[(page * this.pageSize) + (address % this.pageSize)] 
+            + (this.memory[(page * this.pageSize) + (address % this.pageSize) + 1] << 8);
     }
 
     uwrite8(address: number, value: number): void {
-        let index = ((address - 0x4000) >>> 13);
-        if (index >= 0 && index <= 3) {
-            this.selectedPages[index] = value;
-        }
+        this.selectedPages[(address >>> 13) % 8] = value;
     }
 
     uwrite16(address: number, value: number): void {
