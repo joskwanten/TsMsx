@@ -131,7 +131,7 @@ export class Z80 implements CPU {
     }
 
     neg(value: number): number {
-        let result = (value == 0x80) ? 0x80 : -value;
+        let result = (value === 0x80) ? 0x80 : -value;
 
         // Set N flag
         this.r8[F] |= Flags.N;
@@ -140,7 +140,7 @@ export class Z80 implements CPU {
         if ((value & 0x0f) > 0) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
 
         // // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -179,7 +179,7 @@ export class Z80 implements CPU {
         // Set flags for ADC operation
         if (withCarry) {
             // Set Zero flag if result is zero
-            if ((result & 0xffff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+            if ((result & 0xffff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
             if (sub) {
                 let overflow = ((operand1 & 0x8000) !== (operand2 & 0x8000)) && ((result & 0x8000) !== (operand1 & 0x8000));
                 if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
@@ -281,7 +281,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.N;
 
         // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
@@ -521,7 +521,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.H;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
-        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+        if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (true) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
@@ -548,7 +548,7 @@ export class Z80 implements CPU {
         this.r16[BC]--;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
-        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+        if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
@@ -604,7 +604,7 @@ export class Z80 implements CPU {
         
         this.r8[A] = val;
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
-        if (this.r8[A] == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
         //if (this.r8[A] > 0x99) { this.r8[F] |= Flags.C; } else { this.r8[F] &= ~Flags.C; }
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits

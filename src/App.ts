@@ -77,7 +77,7 @@ async function reset() {
     // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
     // let slot1 = new Rom(gameMemory);
 
-    response = await fetch('games/F1SPIRIT.ROM');
+    response = await fetch('games/GALIOUS.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let slot1 = new KonamiMegaRomSCC(game, 44100);
