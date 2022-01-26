@@ -206,7 +206,7 @@ export class Z80 implements CPU {
 
         // Set Zero flag if result is zero
         if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        
+
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
@@ -232,7 +232,7 @@ export class Z80 implements CPU {
 
         // Set Zero flag if result is zero
         if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        
+
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
@@ -390,19 +390,19 @@ export class Z80 implements CPU {
         // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
         let val = ((this.memory.uread8(this.r16[HL]) << 4) + (this.r8[A] & 0xf));
 
-        this.r8[A] = (this.r8[A] & 0xf0) | ((val  >>> 8) & 0xf);
+        this.r8[A] = (this.r8[A] & 0xf0) | ((val >>> 8) & 0xf);
         this.memory.uwrite8(this.r16[HL], val);
-        
-         // Reset N flag if it is an increment
-         this.r8[F] = ~Flags.N;
 
-         // Set Zero flag if result in A is 0
-         if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-         
-         // Set Sign / F3 / F5 are copies of the result
-         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
-         this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
- 
+        // Reset N flag if it is an increment
+        this.r8[F] = ~Flags.N;
+
+        // Set Zero flag if result in A is 0
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
+
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
@@ -562,22 +562,33 @@ export class Z80 implements CPU {
         // of A contain a non-BCD digit (i. e. it is greater than 9) or the H flag is set, then $06 
         // is added to the register. Then the four most significant bits are checked. If this more 
         // significant digit also happens to be greater than 9 or the C flag is set, then $60 is added.
-        let al = this.r8[A];
-        let ah = this.r8[A] >>> 4;
-        let c = false;
-        if (al > 9) {
-            al += 6;
-        }
-        if (ah > 9) {
-            ah += 6;
-            c = true;
+        let val = this.r8[A];
+        if (!(this.r8[F] & Flags.N)) {
+            if ((this.r8[A] & 0xf) > 9 || (this.r8[F] & Flags.H)) {
+                this.r8[A] += 0x06;
+            }
+
+            if (this.r8[A] > 0x99 || (this.r8[F] & Flags.C)) {
+                this.r8[A] += 0x60;
+                this.r8[F] |= Flags.C;
+            }
+        } else {
+            if ((this.r8[A] & 0xf) > 9 || (this.r8[F] & Flags.H)) {
+                this.r8[A] -= 0x06;
+            }
+
+            if (this.r8[A] > 0x99 || (this.r8[F] & Flags.C)) {
+                this.r8[A] -= 0x60;
+                this.r8[F] |= Flags.C;
+            }
         }
 
-        this.r8[A] = (ah << 4) + (al & 0xf);
-        // If the second addition was needed, the C flag is set after execution, otherwise it is reset. 
-        // The N flag is preserved, P/V is parity and the others are altered by definition.
-        if (c) { this.r8[F] != Flags.C; } else { this.r8[F] &= ~Flags.C; }
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        if (this.r8[A] == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
     }
 
     constructor(public memory: Memory, private IO: IO, private logger: Logger) {
