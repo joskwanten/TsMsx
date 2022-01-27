@@ -131,7 +131,7 @@ const registersLD = {
 
 const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
 const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/ };
-const qLookup = {/*0: 'B', 1: 'C', 2: 'D', 3: 'E', */ 4: 'IYh', 5: 'IYl' /*, 7: 'A' */};
+const qLookup = {/*0: 'B', 1: 'C', 2: 'D', 3: 'E', */ 4: 'IYh', 5: 'IYl' /*, 7: 'A' */ };
 
 function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
@@ -177,7 +177,7 @@ function generateLDOpcode(r, dst, src, opcode) {
         if (registersLD[dst].type == 16 && registersLD[src].src16) {
             emitCode(registersLD[src].src16);
         } else {
-            emitCode(registersLD[src].src);      
+            emitCode(registersLD[src].src);
         }
         if (src == '(n)') {
             emitCode('let val = this.IO.read8(n);');
@@ -264,11 +264,12 @@ function generateShiftRotateOpcode(r, dst, src, opcode) {
             r.Instruction.indexOf('RLC ') == 0 ? 'rotateLeftCarry' :
                 r.Instruction.indexOf('RRC ') == 0 ? 'rotateRightCarry' :
                     r.Instruction.indexOf('SLA ') == 0 ? 'shiftLeft' :
-                        r.Instruction.indexOf('SRA ') == 0 ? 'shiftRightArithmetic' :
-                            r.Instruction.indexOf('SRL ') == 0 ? 'shiftRightLogic' : 'unknown';
+                        r.Instruction.indexOf('SLL ') == 0 ? 'shiftLeftLogical' :
+                            r.Instruction.indexOf('SRA ') == 0 ? 'shiftRightArithmetic' :
+                                r.Instruction.indexOf('SRL ') == 0 ? 'shiftRightLogic' : 'unknown';
 
     if (registersLD[src].direct) {
-        emitCode(`${registersLD[dst].direct} = this.${operation}(${registersLD[dst].direct});`);
+        emitCode(`${registersLD[dst].direct} = this.${operation}(${registersLD[src].direct});`);
     } else {
         emitCode(registersLD[src].src);
         emitCode(`val = this.${operation}(val);`);
@@ -1211,6 +1212,7 @@ async function generateCode() {
                     else if (r.Instruction.indexOf('SLA ') == 0) { generateShiftRotate(r); }
                     else if (r.Instruction.indexOf('SRA ') == 0) { generateShiftRotate(r); }
                     else if (r.Instruction.indexOf('SRL ') == 0) { generateShiftRotate(r); }
+                    else if (r.Instruction.indexOf('SLL ') == 0) { generateShiftRotate(r); }
                     else if (r.Instruction.indexOf('RET') == 0) { generateRet(r); }
                     else if (r.Instruction.indexOf('PUSH ') == 0) { generatePushPop(r); }
                     else if (r.Instruction.indexOf('POP ') == 0) { generatePushPop(r); }
