@@ -1,5 +1,5 @@
-import { SlotSelector } from './SlotSelector';
-import { Memory } from './Memory'
+import { SlotSelector } from './SlotSelector.js';
+import { Memory } from './Memory.js'
 
 
 export class Slots implements Memory, SlotSelector  {

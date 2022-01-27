@@ -1,9 +1,7 @@
-import { Ram } from './Ram';
-import { Logger, Registers } from './Logger';
-import { CPU } from "./CPU";
-import { IO } from "./IO";
-import { Memory } from "./Memory";
-import { throws } from 'assert';
+import { Logger, Registers } from './Logger.js';
+import { CPU } from "./CPU.js";
+import { IO } from "./IO.js";
+import { Memory } from "./Memory.js";
 
 export const A = 1;
 export const F = 0;

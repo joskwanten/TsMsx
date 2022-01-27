@@ -1,16 +1,15 @@
-import { KonamiMegaRom } from './KonamiMegaRom';
-import { AY_3_8910 } from './AY-3-8910';
-import { TMS9918 } from './TMS9918';
-import { SubSlotSelector } from './SubSlotSelector';
-import { Rom } from './Rom';
-import { IO } from './IO';
-import { Logger, Registers } from './Logger';
-import { Z80 } from './z80_generated';
-import { Slots } from './Slots';
-import { EmptySlot } from './EmptySlot';
-import { Ram } from './Ram';
-import { PPI } from './PPI';
-import { KonamiMegaRomSCC } from './KonamiMegaRomSCC';
+import { TMS9918 } from './TMS9918.js';
+import { SubSlotSelector } from './SubSlotSelector.js';
+import { Rom } from './Rom.js';
+import { IO } from './IO.js';
+import { Logger, Registers } from './Logger.js';
+import { Z80 } from './z80_generated.js';
+import { Slots } from './Slots.js';
+import { EmptySlot } from './EmptySlot.js';
+import { Ram } from './Ram.js';
+import { PPI } from './PPI.js';
+import { KonamiMegaRomSCC } from './KonamiMegaRomSCC.js';
+import { AY_3_8910 } from './AY-3-8910.js';
 
 
 function changeBackground(c: number) {
@@ -23,13 +22,13 @@ function changeBackground(c: number) {
 let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
-//let ay3 = new AY_3_8910();
-// ay3.configure(false, 1789772, 44100);
-// ay3.setPan(0, 0.5, false);
-// ay3.setPan(1, 0.5, false);
-// ay3.setPan(2, 0.5, false);
+let ay3 = new AY_3_8910();
+ay3.configure(false, 1789772, 44100);
+ay3.setPan(0, 0.5, false);
+ay3.setPan(1, 0.5, false);
+ay3.setPan(2, 0.5, false);
 
-let psg = new AY_3_8910();
+//let psg = new AY_3_8910();
 
 let scc : SoundDevice;
 
@@ -37,11 +36,11 @@ let fillBuffer = function (e: any) {
     var left = e.outputBuffer.getChannelData(0);
     var right = e.outputBuffer.getChannelData(1);
     for (var i = 0; i < left.length; i++) {
-        left[i] = right[i] = psg.process();
-        // ay3.process();
-        // ay3.removeDC();
-        // left[i] = ay3.left;
-        // right[i] = ay3.right;
+        //left[i] = right[i] = psg.process();
+        ay3.process();
+        ay3.removeDC();
+        left[i] = ay3.left /2;
+        right[i] = ay3.right /2;
 
         if (scc) {
             let val = scc.process();
@@ -79,7 +78,7 @@ async function reset() {
     // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
     // let slot1 = new Rom(gameMemory);
 
-    response = await fetch('games/PENGUIN.ROM');
+    response = await fetch('games/SALAMAND.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let slot1 = new KonamiMegaRomSCC(game, 44100);
@@ -103,7 +102,8 @@ async function reset() {
                 case 0x99:
                     return vdp.read(true);
                 case 0xa02:
-                    return psg.read();
+                    //return psg.read();
+                    return this.psgRegisters[this.psgRegister];
                 case 0xa8:
                     return slots.getSlotSelector();
                 case 0xa9:
@@ -124,12 +124,12 @@ async function reset() {
                     vdp.write(true, value);
                     break;
                 case 0xa0:
-                    psg.selectRegister(value);
+                    this.psgRegister = value;
                     break;
                 case 0xa1:
-                    psg.write(value);
-                    // this.psgRegisters[this.psgRegister] = value;
-                    // ay3.updateState(this.psgRegisters);
+                    //psg.write(value);
+                    this.psgRegisters[this.psgRegister] = value;
+                    ay3.updateState(this.psgRegisters);
                     break;
                 case 0xa8:
                     slots.setSlotSelector(value);

@@ -1,11 +1,7 @@
-import { TMS9918 } from './TMS9918';
-import { SubSlotSelector } from './SubSlotSelector';
-import { Rom } from './Rom';
-import { IO } from './IO';
-import { Logger, Registers } from './Logger';
-import { Z80, C, E, DE, PC, SP, A } from './z80_generated';
-import { Slots } from './Slots';
-import { EmptySlot } from './EmptySlot';
+import { TMS9918 } from './TMS9918.js';
+import { IO } from './IO.js';
+import { Logger, Registers } from './Logger.js';
+import { Z80, C, E, DE, PC, SP, A } from './z80_generated.js';
 import { Ram } from './Ram';
 
 

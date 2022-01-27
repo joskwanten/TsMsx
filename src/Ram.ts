@@ -1,4 +1,4 @@
-import { Memory } from './Memory';
+import { Memory } from './Memory.js';
 
 export class Ram implements Memory {
     memory = new Uint8Array(0x10000);
