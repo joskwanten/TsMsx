@@ -1,5 +1,5 @@
 import { KonamiMegaRom } from './KonamiMegaRom';
-import { AY_3_8910 } from './AY-3-8910_ayumi';
+import { AY_3_8910 } from './AY-3-8910';
 import { TMS9918 } from './TMS9918';
 import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
@@ -29,7 +29,7 @@ let ppi = new PPI();
 // ay3.setPan(1, 0.5, false);
 // ay3.setPan(2, 0.5, false);
 
-let psg = new AY_3_8910_JKW();
+let psg = new AY_3_8910();
 
 let scc : SoundDevice;
 

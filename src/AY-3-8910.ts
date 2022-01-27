@@ -3,9 +3,9 @@ const ChanA = 0;
 const ChanB = 1;
 const ChanC = 2;
 
-class AY_3_8910_JKW implements SoundDevice{
+export class AY_3_8910 implements SoundDevice{
     selected = 0;
-    psg = new Int8Array(16);
+    psg = new Uint8Array(16);
     time = 0; // Counts 44100 per second
     
     selectRegister(value: number) {
@@ -37,7 +37,7 @@ class AY_3_8910_JKW implements SoundDevice{
             // Controlled by the envelope
             return 0;
         } else {
-            return this.psg[8] & 0xf;
+            return (this.psg[8] & 0xf) / 15;
         }
     }
 
@@ -59,15 +59,15 @@ class AY_3_8910_JKW implements SoundDevice{
 
     process() {
         let val = 0;
-        for (let chan = 0; chan < 2; chan++) {
+        for (let chan = 0; chan < 3; chan++) {
             let f = this.getFrequency(chan);
-            let step = f / 44100;
+            let step = (2 * f) / 44100;
             let pos = (Math.floor(step * this.time)) % 2;
-            val +=  pos == 0 ? this.getVolume(chan) : 0;
+            val +=  pos ? 0 : this.getVolume(chan);
         }
 
         this.time++;
-        return val / 3;
+        return val / 5;
     }
 
 }

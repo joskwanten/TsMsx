@@ -67,7 +67,7 @@ let slideDown = (e: any) => {
 let holdTop = (e: any) => { };
 let holdBottom = (e: any) => { };
 
-export class AY_3_8910 {
+export class AY_3_8910_AYUMI {
   registers: number[] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0];
   channels = this.getChannels();
   noisePeriod = 0;
