@@ -5,7 +5,7 @@ import { SubSlotSelector } from './SubSlotSelector';
 import { Rom } from './Rom';
 import { IO } from './IO';
 import { Logger, Registers } from './Logger';
-import { PC, Z80 } from './z80_generated';
+import { Z80 } from './z80_generated';
 import { Slots } from './Slots';
 import { EmptySlot } from './EmptySlot';
 import { Ram } from './Ram';
@@ -23,12 +23,13 @@ function changeBackground(c: number) {
 let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
-let ay3 = new AY_3_8910();
+//let ay3 = new AY_3_8910();
+// ay3.configure(false, 1789772, 44100);
+// ay3.setPan(0, 0.5, false);
+// ay3.setPan(1, 0.5, false);
+// ay3.setPan(2, 0.5, false);
 
-ay3.configure(false, 1789772, 44100);
-ay3.setPan(0, 0.5, false);
-ay3.setPan(1, 0.5, false);
-ay3.setPan(2, 0.5, false);
+let psg = new AY_3_8910();
 
 let scc : SoundDevice;
 
@@ -36,10 +37,11 @@ let fillBuffer = function (e: any) {
     var left = e.outputBuffer.getChannelData(0);
     var right = e.outputBuffer.getChannelData(1);
     for (var i = 0; i < left.length; i++) {
-        ay3.process();
-        ay3.removeDC();
-        left[i] = ay3.left;
-        right[i] = ay3.right;
+        left[i] = right[i] = psg.process();
+        // ay3.process();
+        // ay3.removeDC();
+        // left[i] = ay3.left;
+        // right[i] = ay3.right;
 
         if (scc) {
             let val = scc.process();
@@ -77,7 +79,7 @@ async function reset() {
     // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
     // let slot1 = new Rom(gameMemory);
 
-    response = await fetch('games/GALIOUS.ROM');
+    response = await fetch('games/PENGUIN.ROM');
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     let slot1 = new KonamiMegaRomSCC(game, 44100);
@@ -101,7 +103,7 @@ async function reset() {
                 case 0x99:
                     return vdp.read(true);
                 case 0xa02:
-                    return this.psgRegisters[this.psgRegister];
+                    return psg.read();
                 case 0xa8:
                     return slots.getSlotSelector();
                 case 0xa9:
@@ -122,11 +124,12 @@ async function reset() {
                     vdp.write(true, value);
                     break;
                 case 0xa0:
-                    this.psgRegister = value;
+                    psg.selectRegister(value);
                     break;
                 case 0xa1:
-                    this.psgRegisters[this.psgRegister] = value;
-                    ay3.updateState(this.psgRegisters);
+                    psg.write(value);
+                    // this.psgRegisters[this.psgRegister] = value;
+                    // ay3.updateState(this.psgRegisters);
                     break;
                 case 0xa8:
                     slots.setSlotSelector(value);
