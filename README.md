@@ -8,5 +8,5 @@ For building, NodeJS and typescript need to be installed. When that is done, one
 > npm run build
 > npm start
 
-[See TsMsx in action with Salamander](https://joskwanten.github.com/TsMsx/index.html)
+[See TsMsx in action with Salamander](https://joskwanten.github.io/TsMsx/index.html)
 
