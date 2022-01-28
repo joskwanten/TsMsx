@@ -1,11 +1,7 @@
-import { TMS9918 } from './TMS9918';
-import { SubSlotSelector } from './SubSlotSelector';
-import { Rom } from './Rom';
-import { IO } from './IO';
-import { Logger, Registers } from './Logger';
-import { Z80, C, E, DE, PC, SP, A } from './z80_generated';
-import { Slots } from './Slots';
-import { EmptySlot } from './EmptySlot';
+import { TMS9918 } from './TMS9918.js';
+import { IO } from './IO.js';
+import { Logger, Registers } from './Logger.js';
+import { Z80, C, E, DE, PC, SP, A } from './z80_generated.js';
 import { Ram } from './Ram';
 
 
@@ -14,7 +10,7 @@ function wait(ms: number) {
 }
 
 let z80: Z80 | null = null;
-let vdp = new TMS9918(() => z80?.interrupt(), (n) => {});
+let vdp = new TMS9918(() => z80?.interrupt(), (n) => { });
 
 async function reset() {
     let response = await fetch('testfiles/z80doc.bin');
@@ -25,10 +21,8 @@ async function reset() {
     let mem = new Ram();
     let romMemory = new Uint8Array(0x10000);
     zexdoc.forEach((b, i) => mem.uwrite8(i + 0x8000, b));
-    // mem.uwrite8(0x006, 0x00);
-    // mem.uwrite8(0x007, 0xf3);
 
-    //     let response = await fetch('testfiles/zexdoc.com');
+    // let response = await fetch('testfiles/zexdoc.com');
     // let buffer = await response.arrayBuffer();
     // let zexdoc = new Uint8Array(buffer);
 
@@ -156,83 +150,21 @@ reset().then(() => {
     console.log(z80);
 });
 
-let running = false;
-
-function step(numOfSteps: number, log = true) {
-    z80?.execute(numOfSteps, log);
-}
-
 window.onload = () => {
-    // const canvas = <HTMLCanvasElement>document.getElementById('screen');
-    // const ctx = canvas.getContext('2d');
-    // const imageData = ctx?.createImageData(256, 192);
-    // if (imageData) {
-    //     // Iterate through every pixel
-    //     for (let i = 0; i < imageData.data.length; i += 4) {
-    //         // Percentage in the x direction, times 255
-    //         let x = (i % 1024) / 1024 * 255;
-    //         // Percentage in the y direction, times 255
-    //         let y = Math.ceil(i / 1024) / 1024 * 255;
+    async function run() {
+        setInterval(() => {
+            if (z80) {
+                let lastCycles = z80.cycles;
+                while ((z80.cycles - lastCycles) < 6000000) {
+                    z80.executeSingleInstruction();
+                }
 
-    //         // Modify pixel data
-    //         imageData.data[i + 0] = x;        // R value
-    //         imageData.data[i + 1] = y;        // G value
-    //         imageData.data[i + 2] = 255 - x;  // B value
-    //         imageData.data[i + 3] = 255;      // A value
-    //     }
-
-    //     // Draw image data to the canvas
-    //     ctx?.putImageData(imageData, 0, 0);
-    // }
-
-    document.querySelector('#reset')?.addEventListener('click', () => {
-        reset();
-    });
-
-    document.querySelector('#step1')?.addEventListener('click', () => {
-        step(1);
-    });
-
-    document.querySelector('#step10')?.addEventListener('click', () => {
-        step(10);
-    });
-
-    document.querySelector('#step100')?.addEventListener('click', () => {
-        step(100);
-    });
-
-    document.querySelector('#run')?.addEventListener('click', async () => {
-        running = true;
-        while (running) {
-            step(1000000, false);
-            await wait(1);
-            if (!running) {
-                return;
+                vdp.checkAndGenerateInterrupt(Date.now());
             }
+        }, 16.67);
+    }
 
-            vdp.checkAndGenerateInterrupt(Date.now());
-        }
-    });
-
-    document.querySelector('#stop')?.addEventListener('click', async () => {
-        running = false;
-    });
-
-    document.querySelector('#runBreak')?.addEventListener('click', async () => {
-        // 0x0d86 - Just before User Interface
-        // 0x0d91 - Call to init_vdp
-        // 0x0d94 - Returned from init_vdp (Hangs now)
-        // 0x074d - init_vdp
-        // 0x026d - init_vdp -> filvrm
-        // 0x0280 - ret filvrm
-        // 0x0260 - setwrt
-        // 0x07a3 - call 0x0297 (ldirvm)
-        // 0x0d94 - call 0x114e (initio)
-        // 0x0da6 - call 0x23bf (rdslt)
-        // 0x0daf - just before some ix commands (logo_none:)
-        // 0x0dc9 - CALL 03c2 (init32)
-        z80?.executeUntil(0x8259); // 0x280 ret verder onderzoeken
-
-        //
+    reset().then(() => {
+        run();
     });
 }

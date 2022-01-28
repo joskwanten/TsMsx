@@ -1,16 +1,15 @@
-import { KonamiMegaRom } from './KonamiMegaRom';
-import { AY_3_8910 } from './AY-3-8910';
-import { TMS9918 } from './TMS9918';
-import { SubSlotSelector } from './SubSlotSelector';
-import { Rom } from './Rom';
-import { IO } from './IO';
-import { Logger, Registers } from './Logger';
-import { PC, Z80 } from './z80_generated';
-import { Slots } from './Slots';
-import { EmptySlot } from './EmptySlot';
-import { Ram } from './Ram';
-import { PPI } from './PPI';
-import { KonamiMegaRomSCC } from './KonamiMegaRomSCC';
+import { TMS9918 } from './TMS9918.js';
+import { SubSlotSelector } from './SubSlotSelector.js';
+import { Rom } from './Rom.js';
+import { IO } from './IO.js';
+import { Logger, Registers } from './Logger.js';
+import { Z80 } from './z80_generated.js';
+import { Slots } from './Slots.js';
+import { EmptySlot } from './EmptySlot.js';
+import { Ram } from './Ram.js';
+import { PPI } from './PPI.js';
+import { KonamiMegaRomSCC } from './KonamiMegaRomSCC.js';
+import { AY_3_8910 } from './AY-3-8910.js';
 
 
 function changeBackground(c: number) {
@@ -24,31 +23,33 @@ let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
-
 ay3.configure(false, 1789772, 44100);
 ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
 ay3.setPan(2, 0.5, false);
 
-let scc : SoundDevice;
+//let psg = new AY_3_8910();
+
+let scc: SoundDevice;
 
 let fillBuffer = function (e: any) {
     var left = e.outputBuffer.getChannelData(0);
     var right = e.outputBuffer.getChannelData(1);
     for (var i = 0; i < left.length; i++) {
+        //left[i] = right[i] = psg.process();
         ay3.process();
         ay3.removeDC();
-        left[i] = ay3.left;
-        right[i] = ay3.right;
+        left[i] = ay3.left / 3;
+        right[i] = ay3.right / 3;
 
         if (scc) {
             let val = scc.process();
-            left[i] += val;
-            right[i] += val;
+            left[i] += .5 * val;
+            right[i] += .5 * val;
 
             left[i] /= 2;
             right[i] /= 2;
- 
+
         }
     }
 
@@ -77,14 +78,27 @@ async function reset() {
     // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
     // let slot1 = new Rom(gameMemory);
 
-    response = await fetch('games/SALAMAND.ROM');
+    const queryString = window.location.search.replace(/\?/, '');
+    
+    let slot1;
+    if (queryString) {
+    console.log(queryString);
+    response = await fetch(queryString);
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
-    let slot1 = new KonamiMegaRomSCC(game, 44100);
+    slot1 = new KonamiMegaRomSCC(game, 44100);
     scc = slot1;
+    }
+
+    // response = await fetch('cbios_disk.rom');
+    // buffer = await response.arrayBuffer();
+    // let diskrom = new Uint8Array(buffer);
+    // let diskMemory = new Uint8Array(0x10000);
+    // diskrom.forEach((b, i) => diskMemory[i + 0x8000] = b);
+    // let slot3sub1 = new Rom(diskMemory);
 
     let slot0 = new Rom(biosMemory);
-    //let slot1 = new EmptySlot();
+    slot1 = slot1 ? slot1 : new EmptySlot();
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
@@ -101,11 +115,22 @@ async function reset() {
                 case 0x99:
                     return vdp.read(true);
                 case 0xa02:
+                    //return psg.read();
                     return this.psgRegisters[this.psgRegister];
                 case 0xa8:
                     return slots.getSlotSelector();
                 case 0xa9:
                     return ppi.readA9();
+                case 0xd0:
+                case 0xd1:
+                case 0xd2:
+                case 0xd3:
+                case 0xd4:
+                case 0xd5:
+                case 0xd6:
+                case 0xd7:
+                    console.log(`Read of ${address.toString(16)}`);
+                    return 0xff;
                 default:
                     //console.log(`Port read not implemented ${address.toString(16)}`);
                     return 0xff;
@@ -125,6 +150,7 @@ async function reset() {
                     this.psgRegister = value;
                     break;
                 case 0xa1:
+                    //psg.write(value);
                     this.psgRegisters[this.psgRegister] = value;
                     ay3.updateState(this.psgRegisters);
                     break;
@@ -139,6 +165,17 @@ async function reset() {
                 case 0x7d:
                     console.debug("Check program counter");
                     break;
+                case 0xd0:
+                case 0xd1:
+                case 0xd2:
+                case 0xd3:
+                case 0xd4:
+                case 0xd5:
+                case 0xd6:
+                case 0xd7:
+                    console.log(`Write of ${address.toString(16)}:${value.toString(16)}`);
+                    break;
+
                 case 0x20:
                     throw new Error('Invalid')
                 case 0x2e:

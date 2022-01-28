@@ -1,5 +1,3 @@
-
-
 export class PPI {
 // The PPI handles also the slot seletion, but in this emulator this is directly handled by the 
 // Slot selector.

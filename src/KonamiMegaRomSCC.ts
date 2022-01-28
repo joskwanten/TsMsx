@@ -1,4 +1,4 @@
-import { Memory } from './Memory';
+import { Memory } from './Memory.js';
 
 export class KonamiMegaRomSCC implements Memory, SoundDevice {
 

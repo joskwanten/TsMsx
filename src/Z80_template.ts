@@ -1,9 +1,7 @@
-import { Ram } from './Ram';
-import { Logger, Registers } from './Logger';
-import { CPU } from "./CPU";
-import { IO } from "./IO";
-import { Memory } from "./Memory";
-import { throws } from 'assert';
+import { Logger, Registers } from './Logger.js';
+import { CPU } from "./CPU.js";
+import { IO } from "./IO.js";
+import { Memory } from "./Memory.js";
 
 export const A = 1;
 export const F = 0;
@@ -103,7 +101,7 @@ export class Z80 implements CPU {
         if (sub) { this.r8[F] |= Flags.N } else { this.r8[F] &= ~Flags.N }
 
         // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -131,7 +129,7 @@ export class Z80 implements CPU {
     }
 
     neg(value: number): number {
-        let result = (value == 0x80) ? 0x80 : -value;
+        let result = (value === 0x80) ? 0x80 : -value;
 
         // Set N flag
         this.r8[F] |= Flags.N;
@@ -140,7 +138,7 @@ export class Z80 implements CPU {
         if ((value & 0x0f) > 0) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
 
         // // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }
 
         // // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
@@ -179,7 +177,7 @@ export class Z80 implements CPU {
         // Set flags for ADC operation
         if (withCarry) {
             // Set Zero flag if result is zero
-            if ((result & 0xffff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+            if ((result & 0xffff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
             if (sub) {
                 let overflow = ((operand1 & 0x8000) !== (operand2 & 0x8000)) && ((result & 0x8000) !== (operand1 & 0x8000));
                 if (overflow) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
@@ -206,7 +204,7 @@ export class Z80 implements CPU {
 
         // Set Zero flag if result is zero
         if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        
+
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
@@ -232,7 +230,7 @@ export class Z80 implements CPU {
 
         // Set Zero flag if result is zero
         if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        
+
         // Set Sign / F3 / F5 are copies of the result
         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
         this.r8[F] |= (result & Flags.S_F5_F3); // Set bits if set in the result
@@ -281,7 +279,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.N;
 
         // Set Zero flag if result is zero
-        if ((result & 0xff) == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        if ((result & 0xff) === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
         // Set sign if the result has its sign bit set (2-complement)
         if (result & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
@@ -354,6 +352,18 @@ export class Z80 implements CPU {
         return result;
     }
 
+    shiftLeftLogical(value: number): number {
+        // Do shifting and add bit0 as bit 7 (0x80)
+        let result = (value << 1) | 1;
+
+        // Store bit0 into the carry
+        if (result & 0x100) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
+
+        // Set flags
+        this.shiftRotateFlags(result, true);
+        return result;
+    }
+
     shiftRightLogic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
         let result = (value >> 1);
@@ -388,21 +398,19 @@ export class Z80 implements CPU {
     rotateRLD() {
         // Performs a 4-bit leftward rotation of the 12-bit number whose 4 most signigifcant 
         // bits are the 4 least significant bits of A, and its 8 least significant bits are in (HL).
-        let val = ((this.memory.uread8(this.r16[HL]) << 4) + (this.r8[A] & 0xf));
-
-        this.r8[A] = (this.r8[A] & 0xf0) | ((val  >>> 8) & 0xf);
+        let val = this.memory.uread8(this.r16[HL])
+        let temp1 = val & 0xf0, temp2 = this.r8[A] & 0x0f;
+        val = ((val & 0x0f) << 4) | temp2;
+        this.r8[A] = (this.r8[A] & 0xf0) | (temp1 >>> 4);
         this.memory.uwrite8(this.r16[HL], val);
-        
-         // Reset N flag if it is an increment
-         this.r8[F] = ~Flags.N;
 
-         // Set Zero flag if result in A is 0
-         if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-         
-         // Set Sign / F3 / F5 are copies of the result
-         this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
-         this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
- 
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
+
+        // Set Zero flag if result in A is 0
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
@@ -410,16 +418,22 @@ export class Z80 implements CPU {
 
     rotateRRD() {
         // Like rld, except rotation is rightward.
-        let val = this.memory.uread8(this.r16[HL]);
-        let a = this.r8[A] & 0xf;
-        this.r8[A] = val & 0xf;
-        val = a << 4 + val >>> 4;
+        let val = this.memory.uread8(this.r16[HL])
+        let temp1 = val & 0x0f, temp2 = this.r8[A] & 0x0f;
+        val = ((val & 0xf0) >>> 4) | (temp2 << 4);
+        this.r8[A] = (this.r8[A] & 0xf0) | temp1;
         this.memory.uwrite8(this.r16[HL], val);
+
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
+
+        // Set Zero flag if result in A is 0
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+
         // The H and N flags are reset, P/V is parity, C is preserved, and S and Z are modified by definition.
         this.r8[F] &= ~(Flags.H | Flags.N);
-        if (this.evenParity[val & 0xff]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
-        if (val == 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
-        if (val & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; } // Not sure if this is the real behaviour but I cannot imagine that the Z80 behaves here as a 12 bit processor
+        if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
     }
 
     generateEvenParityTable() {
@@ -505,7 +519,7 @@ export class Z80 implements CPU {
         this.r8[F] &= ~Flags.H;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
-        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+        if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (true) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
@@ -532,7 +546,7 @@ export class Z80 implements CPU {
         this.r16[BC]--;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
-        if (this.r16[BC] == 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
+        if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
         // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
         if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
@@ -562,22 +576,37 @@ export class Z80 implements CPU {
         // of A contain a non-BCD digit (i. e. it is greater than 9) or the H flag is set, then $06 
         // is added to the register. Then the four most significant bits are checked. If this more 
         // significant digit also happens to be greater than 9 or the C flag is set, then $60 is added.
-        let al = this.r8[A];
-        let ah = this.r8[A] >>> 4;
-        let c = false;
-        if (al > 9) {
-            al += 6;
-        }
-        if (ah > 9) {
-            ah += 6;
-            c = true;
+        var val = this.r8[A];
+        if (!(this.r8[F] & Flags.N)) {
+            if ((this.r8[F] & Flags.H) || ((this.r8[A] & 0x0f) > 9)) {
+                val += 0x06;
+            }
+
+            if ((this.r8[F] & Flags.N) || (this.r8[A] > 0x99)) {
+                val += 0x60;
+                this.r8[F] |= Flags.C;
+            }
+
+        } else {
+            if (this.r8[F] & Flags.H || ((this.r8[A] & 0x0f) > 9)) {
+                val -= 0x06;
+            }
+
+            if (this.r8[F] & Flags.C || (this.r8[A] > 0x99)) {
+                val -= 0x60;
+                this.r8[F] |= Flags.C;
+            }
         }
 
-        this.r8[A] = (ah << 4) + (al & 0xf);
-        // If the second addition was needed, the C flag is set after execution, otherwise it is reset. 
-        // The N flag is preserved, P/V is parity and the others are altered by definition.
-        if (c) { this.r8[F] != Flags.C; } else { this.r8[F] &= ~Flags.C; }
+        if ((this.r8[A] & 0x10) ^ (val & 0x10)) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
+        
+        this.r8[A] = val;
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
+        if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
+        //if (this.r8[A] > 0x99) { this.r8[F] |= Flags.C; } else { this.r8[F] &= ~Flags.C; }
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
     }
 
     constructor(public memory: Memory, private IO: IO, private logger: Logger) {
@@ -724,6 +753,13 @@ export class Z80 implements CPU {
                 this.opcodes[0xC9](this.r16[PC]);
             }
         }
+
+
+        // R is incremented at the start of every instruction cycle,
+        //  before the instruction actually runs.
+        // The high bit of R is not affected by this increment,
+        //  it can only be changed using the LD R, A instruction.
+        this.r8[R] = (this.r8[R] & 0x80) | (((this.r8[R] & 0x7f) + 1) & 0x7f);
 
         let addr = this.r16[PC]++;
         let opcode = this.memory.uread8(addr);

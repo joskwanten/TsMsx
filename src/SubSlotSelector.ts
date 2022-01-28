@@ -1,6 +1,4 @@
-import { SlotSelector } from './SlotSelector';
-import { Memory } from './Memory'
-
+import { Memory } from './Memory.js'
 
 export class SubSlotSelector implements Memory  {
     subSlotRegister = 0;

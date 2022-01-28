@@ -12,9 +12,6 @@ Reg/Bit	7	    6	    5	    4	    3	    2	    1	    0
 Status  INT	    5S	    C   	FS4	    FS3	    FS2	    FS1	    FS0
 */
 
-import { isUint32Array } from "util/types";
-import { F } from "./z80_generated";
-
 enum StatusFlags {
     S_INT = 0b10000000,
     S_5S = 0b01000000,
