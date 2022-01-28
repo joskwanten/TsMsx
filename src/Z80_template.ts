@@ -119,7 +119,9 @@ export class Z80 implements CPU {
             let H = (((value1 & 0x0f) - (value2 & 0x0f)) & 0x10) ? true : false;
             if (H) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
         } else {
-            let overflow = ((value1 & 0x80) == (value2 & 0x80)) && ((result & 0x80) !== (value1 & 0x80));
+
+            // flags.P = ((a & 0x80) === (operand & 0x80)) && ((a & 0x80) !== (result & 0x80)) ? 1 : 0;
+            let overflow = ((value1 & 0x80) === (value2 & 0x80)) && ((value1 & 0x80) !== (result & 0x80));
             if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
             let H = (((value1 & 0x0f) + (value2 & 0x0f)) & 0x10) ? true : false;
             if (H) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
@@ -820,3 +822,5 @@ export class Z80 implements CPU {
         /* GENERATED_CODE_INSERT_HERE */
     }
 }
+
+// RLC (IX+o),r;23;DD CB o 0+r; 2
