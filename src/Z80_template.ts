@@ -696,7 +696,7 @@ export class Z80 implements CPU {
             this.halted = false;
             let retadd = this.r16[PC];
             this.r16[PC] = 0x0038;
-            this.log(0x0038, `INT ($${retadd})`);
+            //this.log(0x0038, `INT ($${retadd})`);
         }
     }
 
@@ -739,6 +739,7 @@ export class Z80 implements CPU {
 
     executeSingleInstruction() {
         if (this.halted) {
+            this.cycles += 1;
             return;
         }
 
@@ -768,27 +769,6 @@ export class Z80 implements CPU {
 
         this.opcodes[opcode](addr);
     }
-
-    execute(numOfInstructions: number, showLog: boolean) {
-        this.logging = showLog;
-        for (let i = 0; i < numOfInstructions; i++) {
-
-            this.executeSingleInstruction();
-        }
-    }
-
-    executeUntil(breakPoint: number) {
-        this.logging = false;
-        while (1) {
-            let prev = this.r16[PC];
-            this.executeSingleInstruction();
-            if (this.r16[PC] == breakPoint) {
-                console.log(`Breakpoint prev: ${prev.toString(16)}`)
-                return;
-            }
-        }
-    }
-
 
     addInstructionCB(opcode: number, func: (addr: number) => void) {
         this.opcodesCB[opcode] = func;

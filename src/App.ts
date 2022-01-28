@@ -79,15 +79,15 @@ async function reset() {
     // let slot1 = new Rom(gameMemory);
 
     const queryString = window.location.search.replace(/\?/, '');
-    
+
     let slot1;
     if (queryString) {
-    console.log(queryString);
-    response = await fetch(queryString);
-    buffer = await response.arrayBuffer();
-    let game = new Uint8Array(buffer);
-    slot1 = new KonamiMegaRomSCC(game, 44100);
-    scc = slot1;
+        console.log(queryString);
+        response = await fetch(queryString);
+        buffer = await response.arrayBuffer();
+        let game = new Uint8Array(buffer);
+        slot1 = new KonamiMegaRomSCC(game, 44100);
+        scc = slot1;
     }
 
     // response = await fetch('cbios_disk.rom');
@@ -207,6 +207,7 @@ async function reset() {
 async function run() {
     setInterval(() => {
         if (z80) {
+            z80.logging = true;
             let lastCycles = z80.cycles;
             while ((z80.cycles - lastCycles) < 60000) {
                 z80.executeSingleInstruction();

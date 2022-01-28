@@ -33,34 +33,10 @@ async function reset() {
     // mem.uwrite8(0x006, 0x00);
     // mem.uwrite8(0x007, 0xf3);
 
-    class ScreenLogger implements Logger {
+    class ConsoleLogger implements Logger {
         debug(str: string, registers: Registers): void {
-            let div = document.createElement('div');
-            div.classList.add('log-line');
-
-            let logtext = document.createElement('div');
-            logtext.classList.add('mnemonic');
-            logtext.innerText = str;
-            div.appendChild(logtext);
-
-            let indexes = ['AF', 'BC', 'DE', 'HL', 'SP', '_BC', '_DE', '_HL'];
-            indexes.forEach(i => {
-                let d = document.createElement('div');
-                d.classList.add('register');
-                d.innerText = `${i}=${('0000' + registers[i].toString(16)).slice(-4)}`;
-                div.appendChild(d);
-            });
-
-            let logger = document.querySelector('#logger');
-            if (logger) {
-                let maxLines = 1000;
-                let numOfRowsTooMany = logger.children.length - maxLines;
-                for (let i = 0; i < numOfRowsTooMany; i++) {
-                    logger.removeChild(logger.children[i]);
-                }
-                logger.appendChild(div);
-                logger.scrollTop = logger.scrollHeight;
-            }
+           // console.log(str);
+            //console.log(registers);
         }
     }
 
@@ -104,7 +80,7 @@ async function reset() {
 
 
 
-    let logger = new ScreenLogger();
+    let logger = new ConsoleLogger();
 
     z80 = new Z80(mem, io, logger);
 
@@ -154,6 +130,7 @@ window.onload = () => {
     async function run() {
         setInterval(() => {
             if (z80) {
+                z80.logging = true;
                 let lastCycles = z80.cycles;
                 while ((z80.cycles - lastCycles) < 6000000) {
                     z80.executeSingleInstruction();
