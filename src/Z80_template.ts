@@ -706,15 +706,7 @@ export class Z80 implements CPU {
             //this.log(0x0038, `INT ($${retadd})`);
         }
     }
-
-    private hex16(n: number) {
-        return ("000" + n.toString(16)).slice(-4);
-    }
-
-    private hex8(n: number) {
-        return ("0" + n.toString(16)).slice(-2);
-    }
-
+    
     private log(address: number, msg: string): void {
         if (this.logging) {
             this.logger.debug(
