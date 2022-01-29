@@ -63,12 +63,25 @@ function wait(ms: number) {
 }
 
 async function reset() {
-    // let response = await fetch('cbios_main_msx1.rom');
-    let response = await fetch('MSX1.ROM');
+    let response = await fetch('cbios_main_msx1.rom');
+    //let response = await fetch('MSX1.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
+
+    response = await fetch('cbios_logo_msx1.rom');
+    //let response = await fetch('MSX1.ROM');
+    buffer = await response.arrayBuffer();
+    let logo = new Uint8Array(buffer);
+    logo.forEach((b, i) => biosMemory[i + 0x8000] = b);
+
+    // let response = await fetch('cbios_main_msx1.rom');
+    // //let response = await fetch('MSX1.ROM');
+    // let buffer = await response.arrayBuffer();
+    // let bios = new Uint8Array(buffer);
+    // let biosMemory = new Uint8Array(0x10000);
+    // bios.forEach((b, i) => biosMemory[i] = b);
 
     // response = await fetch('games/QBERT.ROM');
     // buffer = await response.arrayBuffer();
@@ -86,8 +99,15 @@ async function reset() {
         response = await fetch(queryString);
         buffer = await response.arrayBuffer();
         let game = new Uint8Array(buffer);
-        slot1 = new KonamiMegaRomSCC(game, 44100);
-        scc = slot1;
+        if (buffer.byteLength > 0x8000) {
+            slot1 = new KonamiMegaRomSCC(game, 44100);
+            scc = slot1;
+        } else {
+            let gameMemory = new Uint8Array(0x10000);
+            gameMemory.forEach((b, i) => gameMemory[i] = 0);
+            game.forEach((g, i) => gameMemory[i + 0x4000] = g);
+            slot1 = new Rom(gameMemory);
+        }
     }
 
     // response = await fetch('cbios_disk.rom');

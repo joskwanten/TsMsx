@@ -35,8 +35,8 @@ async function reset() {
 
     class ConsoleLogger implements Logger {
         debug(str: string, registers: Registers): void {
-           console.log(str);
-            console.log(registers);
+           //console.log(str);
+            //console.log(registers);
         }
     }
 

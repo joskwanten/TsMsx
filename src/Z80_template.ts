@@ -235,7 +235,7 @@ export class Z80 implements CPU {
     dec8(operand: number): number {
         let result = operand - 1;
 
-        // Reset N flag if it is an increment
+        // Set N flag
         this.r8[F] |= Flags.N;
 
         // Set Zero flag if result is zero
@@ -507,8 +507,8 @@ export class Z80 implements CPU {
 
         this.r8[B] = this.dec8(this.r8[B]);
 
-        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
-        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+        // N flag always set (also set by the dec8)
+        this.r8[F] |= Flags.N;
     }
 
     ldi_ldd(inc: boolean) {
@@ -528,11 +528,13 @@ export class Z80 implements CPU {
         // Reset Half Carry
         this.r8[F] &= ~Flags.H;
 
-        // P/V is reset in case of overflow (if BC=0 after calling LDI).        
+        // P/V is reset if BC=0 after calling LDI / LDD       
         if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 
-        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
-        if (true) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
+        // Rest the N flag for all both LDI and LDD
+        this.r8[F] &= ~Flags.N;
+        // Reset the H flag for both LDI and LDD
+        this.r8[F] &= ~Flags.H;
     }
 
     cpi_cpd(inc: boolean) {
@@ -558,7 +560,7 @@ export class Z80 implements CPU {
 
         this.r16[BC]--;
 
-        // P/V is reset in case of overflow (if BC=0 after calling LDI).        
+        // P/V is reset in case if BC=0 after calling cpi or cpd
         if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
     }
 
@@ -591,17 +593,14 @@ export class Z80 implements CPU {
             if ((this.r8[F] & Flags.H) || ((this.r8[A] & 0x0f) > 9)) {
                 val += 0x06;
             }
-
-            if ((this.r8[F] & Flags.N) || (this.r8[A] > 0x99)) {
+            if ((this.r8[F] & Flags.C) || (this.r8[A] > 0x99)) {
                 val += 0x60;
                 this.r8[F] |= Flags.C;
             }
-
         } else {
             if (this.r8[F] & Flags.H || ((this.r8[A] & 0x0f) > 9)) {
                 val -= 0x06;
             }
-
             if (this.r8[F] & Flags.C || (this.r8[A] > 0x99)) {
                 val -= 0x60;
                 this.r8[F] |= Flags.C;
