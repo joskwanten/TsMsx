@@ -160,7 +160,7 @@ export class TMS9918 {
 
         if (mode) {
             let value = this.vdpStatus;
-            this.vdpStatus &= ~StatusFlags.S_INT;
+            this.vdpStatus = 0;
             return value;
         } else {
             let value = this.vram[this.vramAddress];

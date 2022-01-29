@@ -54,11 +54,6 @@ export class Z80 implements CPU {
     // The Z80 uses 208bits from it
     r16 = new Uint16Array(16);
 
-    // We will use this array with only one element
-    // to convert a javascript number to a 16 bit represenation
-    // this to find out which flags have to be set
-    rAlu = new Uint16Array(1);
-
     // Array to access shadow registers
     r16s = new Uint16Array(16);
 
