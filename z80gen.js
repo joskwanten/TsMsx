@@ -240,9 +240,9 @@ function generateAddSubCpOpcode(r, dst, src, opcode) {
 
     let store = cp ? '' : `${registersLD[dst].direct} = `
     if (registersLD[src].type == 16) {
-        emitCode(`${store}this.addSub16(${registersLD[dst].direct}, val, ${sub}, ${carry})`);
+        emitCode(`${store}this.addSub16(${registersLD[dst].direct}, val, ${sub}, ${carry});`);
     } else {
-        emitCode(`${store}this.addSub8(${registersLD[dst].direct}, val, ${sub}, ${carry})`);
+        emitCode(`${store}this.addSub8(${registersLD[dst].direct}, val, ${sub}, ${carry});`);
     }
 
     let instr = r.Instruction.replace(/r/, src)

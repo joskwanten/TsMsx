@@ -1,7 +1,7 @@
 import { Memory } from './Memory.js';
 
 export class Ram implements Memory {
-    memory = new Uint8Array(0x10000);
+    memory = new Uint8Array(0x10000).fill(0);
     memorys = new Int8Array(this.memory.buffer);
     memory16 = new Uint16Array(this.memory.buffer);
   

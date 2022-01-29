@@ -84,6 +84,19 @@ export class Z80 implements CPU {
     systemCalls: ((cpu: Z80) => void)[] = [];
     logging = false;
 
+    get flags() {
+        return { 
+            C: (this.r8[F] & Flags.C) !== 0,
+            H: (this.r8[F] & Flags.H) !== 0,
+            N: (this.r8[F] & Flags.N) !== 0,
+            P: (this.r8[F] & Flags.PV) !== 0,
+            S: (this.r8[F] & Flags.S) !== 0,
+            //X: (this.r8[F] & Flags.X) !== 0,
+            //Y: (this.r8[F] & Flags.Y) !== 0,
+            Z: (this.r8[F] & Flags.Z) !== 0,
+        }
+    }
+
     addSub8(value1: number, value2: number, sub: boolean, carry: boolean): number {
         // If carry has to be taken into account add one to the second operand
         if (carry && (this.r8[F] & Flags.C)) {
@@ -529,24 +542,24 @@ export class Z80 implements CPU {
         // The carry is preserved, N is set and all the other flags are affected as defined. 
         // P/V denotes the overflowing of BC, while the Z flag is set if A=(HL) before HL is decreased.
 
-        // Set zero flag in case A = (HL)
-        if (this.r8[A] == val) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z };
+        let temp = this.r8[F];
+        this.addSub8(this.r8[A], val, true, false);
+        if (temp  & Flags.C) { this.r8[F] |= Flags.C; }  else { this.r8[F] &= ~Flags.C; }
 
+        // Undocumented behavior (see Z80.js)
+        //flags.Y = ((a - read_value - flags.H) & 0x02) >>> 1;
+        //flags.X = ((a - read_value - flags.H) & 0x08) >>> 3;
+        
         if (inc) {
             this.r16[HL]++;
-            this.r16[DE]++;
         } else {
-            this.r16[HL]--;
-            this.r16[DE]--;
+            this.r16[HL]--;            
         }
 
         this.r16[BC]--;
 
         // P/V is reset in case of overflow (if BC=0 after calling LDI).        
         if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
-
-        // Reset N flag if incrementing else set flag. (Documentation is inconsistent about this) )
-        if (inc) { this.r8[F] &= ~Flags.N; } else { this.r8[F] |= Flags.N }
     }
 
     disableInterrupts() {
