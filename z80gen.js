@@ -206,12 +206,23 @@ function generateLDOpcode(r, dst, src, opcode) {
         .replace(/,n/, ',${val.toString(16)}');
 
     if (src === 'R' || src === 'I') {
-        emitCode('if ((this.r8[A] & 0xff) === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }');
+        emitCode('if (this.r8[A] === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }');
         emitCode('this.r8[F] &= ~Flags.S_F5_F3;');
         emitCode('this.r8[F] |= (this.r8[A] & Flags.S_F5_F3);');
         emitCode('this.r8[F] &= ~Flags.H;');
         emitCode('if (this.iff2) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }');
         emitCode('this.r8[F] &= ~Flags.N;');
+    }
+
+    if (r.Instruction.indexOf('IN ') === 0) {
+        // IN Statement set flags
+        // N flag reset, P/V represents parity, C flag preserved, all other flags affected by definition.
+        emitCode('this.r8[F] &= ~Flags.N;');
+        emitCode('this.r8[F] &= ~Flags.H;');
+        emitCode('if (val === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }');
+        emitCode('this.r8[F] &= ~Flags.S_F5_F3;');
+        emitCode('this.r8[F] |= (val & Flags.S_F5_F3);');
+        emitCode('if (this.evenParity[val]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }');
     }
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
