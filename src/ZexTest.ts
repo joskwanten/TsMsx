@@ -48,8 +48,8 @@ async function reset() {
                 case 0x99:
                     return vdp.read(true);
                 default:
-                    console.log(`Port read not implemented ${address.toString(16)}`);
-                    return 0xff;
+                    //console.log(`Port read not implemented ${address.toString(16)}`);
+                    return 0xbf;
             }
         }
         write8(address: number, value: number): void {

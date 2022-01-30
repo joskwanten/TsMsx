@@ -188,7 +188,12 @@ function generateLDOpcode(r, dst, src, opcode) {
         if (registersLD[src].type == 16 && registersLD[dst].type == 8) {
             emitCode(registersLD[dst].dst16);
         } else {
-            emitCode(registersLD[dst].dst);
+            // The undocumented opcode ED 70 is documented in the CSV
+            // as IN F,(C), but must be IN (C). So therefor the result is 
+            // not loaded into the F register
+            if (!(src == '(C)' && dst == 'F')) {
+                emitCode(registersLD[dst].dst);
+            }
         }
     }
 
@@ -199,6 +204,15 @@ function generateLDOpcode(r, dst, src, opcode) {
         .replace(/,\(nn\)/, ',(${nn.toString(16)})')
         .replace(/\(n\)/, '(${n.toString(16)})')
         .replace(/,n/, ',${val.toString(16)}');
+
+    if (src === 'R' || src === 'I') {
+        emitCode('if ((this.r8[A] & 0xff) === 0) { this.r8[F] |= Flags.Z } else { this.r8[F] &= ~Flags.Z }');
+        emitCode('this.r8[F] &= ~Flags.S_F5_F3;');
+        emitCode('this.r8[F] |= (this.r8[A] & Flags.S_F5_F3);');
+        emitCode('this.r8[F] &= ~Flags.H;');
+        emitCode('if (this.iff2) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }');
+        emitCode('this.r8[F] &= ~Flags.N;');
+    }
 
     emitCode(`this.cycles += ${r.TimingZ80};`);
     emitLog(`this.log(addr, \`${instr}\`)`);
@@ -451,20 +465,17 @@ function generateInOutOpcode(r, opcode) {
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
+    emitCode(`this.ini_inid_outi_outd(${inop}, ${inc});`);
 
     if (repeat) {
         emitCode(`if(this.r8[B] > 0) {`);
-        emitCode(`while(this.r8[B] > 0) {`);
-    }
-
-    emitCode(`this.ini_inid_outi_outd(${inop}, ${inc});`);
-    emitCode(`this.cycles += ${timings[0]};`);
-
-    if (repeat) {
-        emitCode(`}`);
+        emitCode(`this.cycles += ${timings[0]};`);
+        emitCode(`this.r16[PC] -= 2;`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
+    } else {
+        emitCode(`this.cycles += ${timings[0]};`);
     }
 
     emitLog(`this.log(addr, \`${instr}\`);`);
@@ -479,20 +490,17 @@ function generateLdiLddLdirLddrOpcode(r, opcode) {
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
+    emitCode(`this.ldi_ldd(${inc});`);
 
     if (repeat) {
         emitCode(`if(this.r16[BC] > 0) {`);
-        emitCode(`while(this.r16[BC] > 0) {`);
-    }
-
-    emitCode(`this.ldi_ldd(${inc});`);
-    emitCode(`this.cycles += ${timings[0]};`);
-
-    if (repeat) {
-        emitCode(`}`);
+        emitCode(`this.cycles += ${timings[0]};`);
+        emitCode(`this.r16[PC] -= 2;`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
+    } else {
+        emitCode(`this.cycles += ${timings[0]};`);
     }
 
     emitLog(`this.log(addr, \`${instr}\`);`);
@@ -507,20 +515,18 @@ function generateCpiCpdCpirCpdrOpcode(r, opcode) {
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
-
-    if (repeat) {
-        emitCode(`if(this.r16[BC] > 0) {`);
-        emitCode(`while(this.r16[BC] > 0) {`);
-    }
-
+    
     emitCode(`this.cpi_cpd(${inc});`);
-    emitCode(`this.cycles += ${timings[0]};`);
 
     if (repeat) {
-        emitCode(`}`);
+        emitCode(`if(!(this.r8[F] & Flags.Z) && this.r16[BC] > 0) {`);
+        emitCode(`this.cycles += ${timings[0]};`);
+        emitCode(`this.r16[PC] -= 2;`);
         emitCode(`} else {`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
+    } else {
+        emitCode(`this.cycles += ${timings[0]};`);
     }
 
     emitLog(`this.log(addr, \`${instr}\`);`);

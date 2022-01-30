@@ -67,8 +67,8 @@ export class Z80 implements CPU {
     interruptEnabled: boolean = true;
 
     // Interrupt flags 
-    iff1 = true;
-    iff2 = true;
+    iff1 = false;
+    iff2 = false;
 
     // flag to indicate if the CPU is halted
     halted = false;
