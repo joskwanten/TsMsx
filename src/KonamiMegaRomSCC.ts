@@ -93,6 +93,7 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     }
 
     uwrite16(address: number, value: number): void {
-        // Not implemented
+        this.uwrite8(address, value & 0xff);
+        this.uwrite8(address + 1, (value >>> 8));
     }
 }

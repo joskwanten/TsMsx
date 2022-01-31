@@ -525,9 +525,6 @@ export class Z80 implements CPU {
 
         this.r16[BC]--;
 
-        // Reset Half Carry
-        this.r8[F] &= ~Flags.H;
-
         // P/V is reset if BC=0 after calling LDI / LDD       
         if (this.r16[BC] === 0) { this.r8[F] &= ~Flags.PV; } else { this.r8[F] |= Flags.PV; }
 

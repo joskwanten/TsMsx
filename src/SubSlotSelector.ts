@@ -33,7 +33,7 @@ export class SubSlotSelector implements Memory  {
     }
 
     uread16(address: number): number {
-        return this.selectedSlot(address).uread16(address);
+        return (this.uread8(address + 1) << 8) + this.uread8(address);
     }
 
     uwrite8(address: number, value: number): void {
@@ -46,10 +46,7 @@ export class SubSlotSelector implements Memory  {
     }
 
     uwrite16(address: number, value: number): void {
-        if (address == 0xfffe) {
-            this.subSlotRegister = (value >> 8) & 0xff;            
-        }
-
-        this.selectedSlot(address).uwrite16(address, value);
+       this.uwrite8(address, value);
+       this.uwrite8(address + 1, value >> 8);
     }
 }
