@@ -11,12 +11,12 @@ export const D = 5;
 export const E = 4;
 export const H = 7;
 export const L = 6;
-export const I = 15;
-export const R = 17;
 export const IXh = 9;
 export const IXl = 8;
 export const IYh = 11;
 export const IYl = 10;
+export const I = 15;
+export const R = 17;
 export const r16_debug = ["AF", "BC", "DE", "HL", "IX", "IY", "SP", "PC"];
 
 export const AF = 0;
@@ -724,8 +724,8 @@ export class Z80 implements CPU {
 
 
     reset(): void {
-        this.r16[PC] = 0;
-        this.r16[SP] = 0;
+        this.r16[PC] = 0xffff;
+        this.r16[SP] = 0xffff;
     }
 
     executeSingleInstruction() {
