@@ -127,8 +127,6 @@ export class Z80 implements CPU {
             let H = (((value1 & 0x0f) - (value2 & 0x0f)) & 0x10) ? true : false;
             if (H) { this.r8[F] |= Flags.H } else { this.r8[F] &= ~Flags.H }
         } else {
-
-            // flags.P = ((a & 0x80) === (operand & 0x80)) && ((a & 0x80) !== (result & 0x80)) ? 1 : 0;
             let overflow = ((value1 & 0x80) === (value2 & 0x80)) && ((value1 & 0x80) !== (result & 0x80));
             if (overflow) { this.r8[F] |= Flags.PV } else { this.r8[F] &= ~Flags.PV }
             let H = (((value1 & 0x0f) + (value2 & 0x0f)) & 0x10) ? true : false;
@@ -698,9 +696,7 @@ export class Z80 implements CPU {
             this.memory.uwrite16(this.r16[SP], this.r16[PC]);
             // Execute the interrupt routine
             this.halted = false;
-            let retadd = this.r16[PC];
             this.r16[PC] = 0x0038;
-            //this.log(0x0038, `INT ($${retadd})`);
         }
     }
     
