@@ -11,7 +11,7 @@ export const D = 5;
 export const E = 4;
 export const H = 7;
 export const L = 6;
-export const I = 16;
+export const I = 15;
 export const R = 17;
 export const IXh = 9;
 export const IXl = 8;
@@ -29,7 +29,6 @@ export const SP = 6;
 export const _I = 7;
 export const _R = 8;
 export const PC = 9;
-export const _F = 10;
 
 enum Flags {
     S = 0b10000000,
@@ -52,10 +51,10 @@ enum LogicalOperation {
 export class Z80 implements CPU {
     // Declare 256bits for the registers
     // The Z80 uses 208bits from it
-    r16 = new Uint16Array(16);
+    r16 = new Uint16Array(10);
 
     // Array to access shadow registers
-    r16s = new Uint16Array(16);
+    r16s = new Uint16Array(10);
 
     // Map the registers to 8bit registers
     r8 = new Uint8Array(this.r16.buffer);

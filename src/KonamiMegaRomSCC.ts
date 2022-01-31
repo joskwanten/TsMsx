@@ -71,10 +71,7 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
     }
 
     uread16(address: number): number {
-        let pageIndex = (address >>> 13) % 8;
-        let page = this.selectedPages[pageIndex];
-        return this.memory[(page * this.pageSize) + (address % this.pageSize)]
-            + (this.memory[(page * this.pageSize) + (address % this.pageSize) + 1] << 8);
+        return this.uread8(address) + (this.uread8(address + 1) << 8);
     }
 
     uwrite8(address: number, value: number): void {
@@ -85,15 +82,13 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
                     this.scc[reg] = value;
                 }
             }
-
-            return;
         } else {
             this.selectedPages[(address >>> 13) % 8] = value;
         }
     }
 
     uwrite16(address: number, value: number): void {
-        this.uwrite8(address, value & 0xff);
+        this.uwrite8(address, value);
         this.uwrite8(address + 1, (value >>> 8));
     }
 }

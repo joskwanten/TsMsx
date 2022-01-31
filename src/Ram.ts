@@ -24,7 +24,7 @@ export class Ram implements Memory {
 
     uwrite16(address: number, value: number): void {  
         address = address & 0xFFFF;   
-        this.memory[address] = value & 0xFF;   
-        this.memory[address + 1] = (value >> 8) & 0xFF;     
+        this.memory[address] = value ;   
+        this.memory[address + 1] = (value >> 8);     
     }
 }
