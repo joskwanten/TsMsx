@@ -480,9 +480,11 @@ function generateInOutOpcode(r, opcode) {
 
     if (repeat) {
         emitCode(`if(this.r8[B] > 0) {`);
-        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`this.r16[PC] -= 2;`);
+        emitCode(`this.disableInterrupts();`);
+        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
+        emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
@@ -501,18 +503,35 @@ function generateLdiLddLdirLddrOpcode(r, opcode) {
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
-    emitCode(`this.ldi_ldd(${inc});`);
 
+    emitCode(`this.ldi_ldd(${inc});`);
     if (repeat) {
         emitCode(`if(this.r16[BC] > 0) {`);
-        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`this.r16[PC] -= 2;`);
+        emitCode(`this.disableInterrupts();`);
+        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
+        emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
         emitCode(`this.cycles += ${timings[0]};`);
     }
+
+    // if (repeat) {
+    //     emitCode(`while(true) {`);
+    //     emitCode(`this.ldi_ldd(${inc});`);
+    //     emitCode(`if(this.r16[BC] > 0) {`);
+    //     emitCode(`this.cycles += ${timings[0]};`);
+    //     emitCode(`} else {`);
+    //     emitCode(`this.cycles += ${timings[1]};`);
+    //     emitCode(`break;`);
+    //     emitCode(`}`);
+    //     emitCode(`}`);
+    // } else {
+    //     emitCode(`this.ldi_ldd(${inc});`);
+    //     emitCode(`this.cycles += ${timings[0]};`);
+    // }
 
     emitLog(`this.log(addr, \`${instr}\`);`);
     emitCode(`});\n`);
@@ -526,14 +545,16 @@ function generateCpiCpdCpirCpdrOpcode(r, opcode) {
     let repeat = instr.indexOf('R') >= 0;
 
     generateLambda(r, opcode);
-    
+
     emitCode(`this.cpi_cpd(${inc});`);
 
     if (repeat) {
         emitCode(`if(!(this.r8[F] & Flags.Z) && this.r16[BC] > 0) {`);
-        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`this.r16[PC] -= 2;`);
+        emitCode(`this.disableInterrupts();`);
+        emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
+        emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
