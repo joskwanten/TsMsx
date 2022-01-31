@@ -92,7 +92,7 @@ export class TMS9918 {
     }
 
     getTextColor() {
-        return (this.registers[7]) >> 4;
+        return (this.registers[7]) >>> 4;
     }
 
     getBackdropColor() {
@@ -112,8 +112,8 @@ export class TMS9918 {
     }
 
     Mode() {
-        let m1 = (this.registers[1] & 0x10) >> 4;
-        let m3 = (this.registers[1] & 0x08) >> 1;
+        let m1 = (this.registers[1] & 0x10) >>> 4;
+        let m3 = (this.registers[1] & 0x08) >>> 1;
         let m2 = (this.registers[0] & 0x02);
         return (m3 | m2 | m1);
     }
@@ -264,7 +264,7 @@ export class TMS9918 {
         for (let y = 0; y < 24; y++) {
             for (let x = 0; x < 32; x++) {
                 let index = (y * 32) + x;
-                let table = (index & mask) >> 8;
+                let table = (index & mask) >>> 8;
                 // Get Pattern name
                 let char = this.vram[PN + index];
                 let offset = (table * 256 * 8) + (8 * char);

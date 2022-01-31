@@ -376,7 +376,7 @@ export class Z80 implements CPU {
 
     shiftRightLogic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
-        let result = (value >> 1);
+        let result = (value >>> 1);
 
         // Store original bit0 into the carry
         if (value & 1) { this.r8[F] |= Flags.C } else { this.r8[F] &= ~Flags.C }
@@ -388,7 +388,7 @@ export class Z80 implements CPU {
 
     shiftRightArithmetic(value: number): number {
         // Do shifting and add bit0 as bit 7 (0x80)
-        let result = (value >> 1);
+        let result = (value >>> 1);
 
         // Copy bit 7 from the original value to maintain the same sign
         result |= (value & 0x80);
@@ -451,7 +451,7 @@ export class Z80 implements CPU {
             .map(x => {
                 let sum = 0;
                 for (let i = 0; i < 8; i++) {
-                    sum += ((x >> i) & 1);
+                    sum += ((x >>> i) & 1);
                 };
                 return !(sum & 1);
             });

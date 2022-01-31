@@ -20,11 +20,11 @@ export class Slots implements Memory, SlotSelector  {
         if (address >= 0 && address <= 0x3fff) {
             return this.slots[this.slotRegister & 0x3];
         } else if (address >= 0x4000 && address <= 0x7fff) {
-            return this.slots[(this.slotRegister >> 2) & 0x3];
+            return this.slots[(this.slotRegister >>> 2) & 0x3];
         } else if (address >= 0x8000 && address <= 0xbfff) {
-            return this.slots[(this.slotRegister >> 4) & 0x3];
+            return this.slots[(this.slotRegister >>> 4) & 0x3];
         } else {
-            return this.slots[(this.slotRegister >> 6) & 0x3];
+            return this.slots[(this.slotRegister >>> 6) & 0x3];
         }
     }
 

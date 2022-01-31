@@ -12,11 +12,11 @@ export class SubSlotSelector implements Memory  {
         if (address >= 0 && address <= 0x3fff) {
             return this.subSlots[this.subSlotRegister & 0x3];
         } else if (address >= 0x4000 && address <= 0x7fff) {
-            return this.subSlots[(this.subSlotRegister >> 2) & 0x3];
+            return this.subSlots[(this.subSlotRegister >>> 2) & 0x3];
         } else if (address >= 0x8000 && address <= 0xbfff) {
-            return this.subSlots[(this.subSlotRegister >> 4) & 0x3];
+            return this.subSlots[(this.subSlotRegister >>> 4) & 0x3];
         } else {
-            return this.subSlots[(this.subSlotRegister >> 6) & 0x3];
+            return this.subSlots[(this.subSlotRegister >>> 6) & 0x3];
         }
     }
 
@@ -47,6 +47,6 @@ export class SubSlotSelector implements Memory  {
 
     uwrite16(address: number, value: number): void {
        this.uwrite8(address, value);
-       this.uwrite8(address + 1, value >> 8);
+       this.uwrite8(address + 1, value >>> 8);
     }
 }
