@@ -13,25 +13,25 @@ let z80: Z80 | null = null;
 let vdp = new TMS9918(() => z80?.interrupt(), (n) => { });
 
 async function reset() {
-    // let response = await fetch('testfiles/z80doc.bin');
-    // let buffer = await response.arrayBuffer();
-    // let zexdoc = new Uint8Array(buffer);
-
-    // // This position is read by Zexall to set the stack pointer (SP)    
-    // let mem = new Ram();
-    // let romMemory = new Uint8Array(0x10000);
-    // zexdoc.forEach((b, i) => mem.uwrite8(i + 0x8000, b));
-
-    let response = await fetch('testfiles/zexdoc.com');
+    let response = await fetch('testfiles/z80doc.bin');
     let buffer = await response.arrayBuffer();
     let zexdoc = new Uint8Array(buffer);
 
     // This position is read by Zexall to set the stack pointer (SP)    
     let mem = new Ram();
     let romMemory = new Uint8Array(0x10000);
-    zexdoc.forEach((b, i) => mem.uwrite8(i + 0x0100, b));
-    mem.uwrite8(0x006, 0x00);
-    mem.uwrite8(0x007, 0xf3);
+    zexdoc.forEach((b, i) => mem.uwrite8(i + 0x8000, b));
+
+    // let response = await fetch('testfiles/zexdoc.com');
+    // let buffer = await response.arrayBuffer();
+    // let zexdoc = new Uint8Array(buffer);
+
+    // // This position is read by Zexall to set the stack pointer (SP)    
+    // let mem = new Ram();
+    // let romMemory = new Uint8Array(0x10000);
+    // zexdoc.forEach((b, i) => mem.uwrite8(i + 0x0100, b));
+    // mem.uwrite8(0x006, 0x00);
+    // mem.uwrite8(0x007, 0xf3);
 
     class ConsoleLogger implements Logger {
         debug(str: string, registers: Registers): void {

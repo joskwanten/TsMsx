@@ -1,4 +1,5 @@
 import { Memory } from './Memory.js';
+import { E } from './z80_generated.js';
 
 export class KonamiMegaRomSCC implements Memory, SoundDevice {
 
@@ -83,7 +84,7 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
                 }
             }
         } else {
-            this.selectedPages[(address >>> 13) % 8] = value;
+            this.selectedPages[(address >>> 13) % 8] = value & 0x3f;
         }
     }
 

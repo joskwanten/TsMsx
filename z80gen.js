@@ -134,7 +134,18 @@ const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: '
 const qLookup = {/*0: 'B', 1: 'C', 2: 'D', 3: 'E', */ 4: 'IYh', 5: 'IYl' /*, 7: 'A' */ };
 
 const data = fs.readFileSync('opcode_verification/opcodes_base.dat', 'utf8');
-let verificationOpcodes = data.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+const verificationOpcodes = data.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+
+function addVerifyComment(opcode) {
+    opcode = ('0x'+ ('0'+ opcode[0].toLowerCase()).slice(-2));
+    let v = verificationOpcodes.filter(x => x[0] == opcode);
+    if (v && v.length) {
+        emitComment(`${v[0][1]}`);
+    } else {
+        console.error('Not found in reference ' + opcode);
+    }
+}
+
 
 function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
@@ -168,10 +179,7 @@ function generateLambda(r, opcode) {
     } else {
         emitCode(`this.addInstruction(0x${opcode[0]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-        let v = verificationOpcodes.filter(x => x[0] == `0x${r.Opcode.toLowerCase()}`);
-        if (v && v.length) {
-            console.error(`${r.Instruction} =  ${v[0][1]}`);
-        }
+        addVerifyComment(opcode);
     }
 }
 
@@ -488,10 +496,10 @@ function generateInOutOpcode(r, opcode) {
     if (repeat) {
         emitCode(`if(this.r8[B] > 0) {`);
         emitCode(`this.r16[PC] -= 2;`);
-        emitCode(`this.disableInterrupts();`);
+        //emitCode(`this.disableInterrupts();`);
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
-        emitCode(`this.enableInterrupts();`);
+        //emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
@@ -515,10 +523,10 @@ function generateLdiLddLdirLddrOpcode(r, opcode) {
     if (repeat) {
         emitCode(`if(this.r16[BC] > 0) {`);
         emitCode(`this.r16[PC] -= 2;`);
-        emitCode(`this.disableInterrupts();`);
+        //emitCode(`this.disableInterrupts();`);
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
-        emitCode(`this.enableInterrupts();`);
+        //emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
@@ -558,10 +566,10 @@ function generateCpiCpdCpirCpdrOpcode(r, opcode) {
     if (repeat) {
         emitCode(`if(!(this.r8[F] & Flags.Z) && this.r16[BC] > 0) {`);
         emitCode(`this.r16[PC] -= 2;`);
-        emitCode(`this.disableInterrupts();`);
+        //emitCode(`this.disableInterrupts();`);
         emitCode(`this.cycles += ${timings[0]};`);
         emitCode(`} else {`);
-        emitCode(`this.enableInterrupts();`);
+        //emitCode(`this.enableInterrupts();`);
         emitCode(`this.cycles += ${timings[1]};`);
         emitCode(`}`)
     } else {
