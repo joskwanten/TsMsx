@@ -133,6 +133,9 @@ const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
 const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/ };
 const qLookup = {/*0: 'B', 1: 'C', 2: 'D', 3: 'E', */ 4: 'IYh', 5: 'IYl' /*, 7: 'A' */ };
 
+const data = fs.readFileSync('opcode_verification/opcodes_base.dat', 'utf8');
+let verificationOpcodes = data.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+
 function generateLambda(r, opcode) {
     if (opcode[0] === 'ED') {
         emitCode(`this.addInstructionED(0x${opcode[1]}, (addr: number) => {`);
@@ -165,6 +168,10 @@ function generateLambda(r, opcode) {
     } else {
         emitCode(`this.addInstruction(0x${opcode[0]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
+        let v = verificationOpcodes.filter(x => x[0] == `0x${r.Opcode.toLowerCase()}`);
+        if (v && v.length) {
+            console.error(`${r.Instruction} =  ${v[0][1]}`);
+        }
     }
 }
 

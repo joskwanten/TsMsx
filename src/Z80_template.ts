@@ -58,10 +58,7 @@ export class Z80 implements CPU {
 
     // Map the registers to 8bit registers
     r8 = new Uint8Array(this.r16.buffer);
-
-    // Array to access shadow registers in 8bit mode
-    r8s = new Uint8Array(this.r16s);
-
+    
     // Interrupts are enabled at startup
     interruptEnabled: boolean = true;
 
