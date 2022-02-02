@@ -133,16 +133,54 @@ const rLookup = { 0: 'B', 1: 'C', 2: 'D', 3: 'E', 4: 'H', 5: 'L', 7: 'A' };
 const pLookup = {/* 0: 'B', 1: 'C', 2: 'D', 3: 'E',*/ 4: 'IXh', 5: 'IXl'/*, 7: 'A'*/ };
 const qLookup = {/*0: 'B', 1: 'C', 2: 'D', 3: 'E', */ 4: 'IYh', 5: 'IYl' /*, 7: 'A' */ };
 
-const data = fs.readFileSync('opcode_verification/opcodes_base.dat', 'utf8');
-const verificationOpcodes = data.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+// const verificationOpcodesFile = fs.readFileSync('opcode_verification/opcodes_base.dat', 'utf8');
+// const verificationOpcodes = verificationOpcodesFile.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+//const verificationOpcodesCBFile = fs.readFileSync('opcode_verification/opcodes_cb.dat', 'utf8');
+//const verificationOpcodesCB = verificationOpcodesCBFile.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+const verificationFiles = [
+    { prefix: 0, file: 'opcode_verification/opcodes_base.dat' },
+    { prefix: 0xcb, file: 'opcode_verification/opcodes_cb.dat' },
+    { prefix: 0xdd, file: 'opcode_verification/opcodes_dd.dat' },
+    { prefix: 0xddcb, file: 'opcode_verification/opcodes_ddcb.dat' },
+    { prefix: 0xed, file: 'opcode_verification/opcodes_ed.dat' },
+    { prefix: 0xfd, file: 'opcode_verification/opcodes_fd.dat' },
+    { prefix: 0xfdcb, file: 'opcode_verification/opcodes_fdcb.dat' }
+].map(opcodeFile => {
+    const verificationOpcodesFile = fs.readFileSync(opcodeFile.file, 'utf8');
+    const verificationOpcodes = verificationOpcodesFile.split('\n').filter(x => x.indexOf('#') != 0 && x != '').map(x => [x.substring(0, 4).toLowerCase(), x.substring(5).toUpperCase()])
+    return verificationOpcodes.map(v => Object.assign({}, {prefix: opcodeFile.prefix, opcode: v[0], mnemonic: v[1]}));
+});
+
+const verificationOpcodes = verificationFiles.reduce((acc,curr) => {acc.push(...curr); return acc; }, [])
+
+function formatOpcode(opcode) {
+    return ('0x' + ('0' + opcode.toLowerCase()).slice(-2));
+}
 
 function addVerifyComment(opcode) {
-    opcode = ('0x'+ ('0'+ opcode[0].toLowerCase()).slice(-2));
-    let v = verificationOpcodes.filter(x => x[0] == opcode);
+    let prefix = 0;
+    switch(opcode[0]) {
+        case 'ED':
+            prefix = 0xed;
+            break;
+        case 'CB':
+            prefix = 0xcb;
+            break;
+        case 'DD':
+            prefix = opcode[1] === 'CB' ? 0xddcb : 0xdd;
+            break;
+        case 'FD':
+            prefix = opcode[1] === 'CB' ? 0xfdcb : 0xfd;
+            break;
+    }
+
+    let o = prefix === 0 ? formatOpcode(opcode[0]) : prefix < 0x256 ? formatOpcode(opcode[1]) : formatOpcode(opcode[3]);
+    let v = verificationOpcodes.filter(x => x.prefix === prefix && x.opcode == o);
     if (v && v.length) {
-        emitComment(`${v[0][1]}`);
+        emitComment(`${v[0].mnemonic}`);
     } else {
         console.error('Not found in reference ' + opcode);
+        emitComment(`NO REFERENCE OPCODE`);
     }
 }
 
@@ -179,8 +217,9 @@ function generateLambda(r, opcode) {
     } else {
         emitCode(`this.addInstruction(0x${opcode[0]}, (addr: number) => {`);
         emitComment(`${r.Instruction} Opcode: ${r.Opcode}`);
-        addVerifyComment(opcode);
     }
+
+    addVerifyComment(opcode);
 }
 
 function generateLDOpcode(r, dst, src, opcode) {
