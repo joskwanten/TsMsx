@@ -759,30 +759,51 @@ export class Z80 implements CPU {
     }
 
     addInstructionCB(opcode: number, func: (addr: number) => void) {
+        if (this.opcodesCB[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesCB[opcode] = func;
     }
 
     addInstructionED(opcode: number, func: (addr: number) => void) {
+        if (this.opcodesED[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesED[opcode] = func;
     }
 
     addInstructionDD(opcode: number, func: (addr: number) => void) {
+        if (this.opcodesDD[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesDD[opcode] = func;
     }
 
     addInstructionFD(opcode: number, func: (addr: number) => void) {
+        if (this.opcodesFD[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesFD[opcode] = func;
     }
 
     addInstructionDDCB(opcode: number, func: (addr: number, o: number) => void) {
+        if (this.opcodesDDCB[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesDDCB[opcode] = func;
     }
 
     addInstructionFDCB(opcode: number, func: (addr: number, o: number) => void) {
+        if (this.opcodesFDCB[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodesFDCB[opcode] = func;
     }
 
     addInstruction(opcode: number, func: (addr: number) => void) {
+        if (this.opcodes[opcode]) {
+            console.error('Double opcode' + opcode.toString(16));
+        }
         this.opcodes[opcode] = func;
     }
 

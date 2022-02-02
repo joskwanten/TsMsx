@@ -363,21 +363,7 @@ NEG;8;ED 64;1
 NEG;8;ED 6C;1
 NEG;8;ED 74;1
 NEG;8;ED 7C;1
-INC IXh;8;DD 24;2
-INC IXl;8;DD 2C;2
-DEC IXh;8;DD 25;2
-DEC IXl;8;DD 2D;2
-INC IYh;8;FD 24;2
-INC IYl;8;FD 2C;2
-DEC IYh;8;FD 25;2
-DEC IYl;8;FD 2D;2
 SLL (HL);15;CB 36;2
 SLL r;8;CB 30+r;2
-LD (nn),BC;12;ED 43 nn nn;2
-LD (nn),DE;12;ED 53 nn nn;2
 LD (nn),HL;12;ED 63 nn nn;2
-LD (nn),SP;12;ED 73 nn nn;2
-LD BC,(nn);12;ED 4B nn nn;2
-LD DE,(nn);12;ED 5B nn nn;2
 LD HL,(nn);12;ED 6B nn nn;2
-LD SP,(nn);12;ED 7B nn nn;2

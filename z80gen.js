@@ -872,7 +872,9 @@ function fillPInOpcodeMul(opcode, p) {
     return opcode.map(o => {
         let match = regex.exec(o);
         if (match) {
-            return `${(parseInt(match.groups['base'], 16) * parseInt(p)).toString(16)}`;
+            //return `${(parseInt(match.groups['base'], 16) * parseInt(p)).toString(16)}`;
+            let result = eval(o);
+            return result.toString(16);
         }
         return `${o}`;
     })
@@ -912,7 +914,9 @@ function fillQInOpcodeMul(opcode, q) {
     return opcode.map(o => {
         let match = regex.exec(o);
         if (match) {
-            return `${(parseInt(match.groups['base'], 16) * parseInt(q)).toString(16)}`;
+            //return `${(parseInt(match.groups['base'], 16) * parseInt(q)).toString(16)}`;
+            let result = eval(o);
+            return result.toString(16);
         }
         return `${o}`;
     })
