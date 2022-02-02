@@ -500,9 +500,6 @@ export class Z80 implements CPU {
         }
 
         this.r8[B] = this.dec8(this.r8[B]);
-
-        // N flag always set (also set by the dec8)
-        this.r8[F] |= Flags.N;
     }
 
     ldi_ldd(inc: boolean) {
