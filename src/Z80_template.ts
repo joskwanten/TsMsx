@@ -58,7 +58,7 @@ export class Z80 implements CPU {
 
     // Map the registers to 8bit registers
     r8 = new Uint8Array(this.r16.buffer);
-    
+
     // Interrupts are enabled at startup
     interruptEnabled: boolean = true;
 
@@ -81,7 +81,7 @@ export class Z80 implements CPU {
     logging = false;
 
     get flags() {
-        return { 
+        return {
             C: (this.r8[F] & Flags.C) !== 0,
             H: (this.r8[F] & Flags.H) !== 0,
             N: (this.r8[F] & Flags.N) !== 0,
@@ -175,7 +175,7 @@ export class Z80 implements CPU {
             if (((operand1 & 0x0fff) + (operand2 & 0x0fff)) & 0x1000) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
         }
 
-        // Set carry if bit 9 is set
+        // Set carry if bit 17 is set
         if (result & 0x10000) { this.r8[F] |= Flags.C; } else { this.r8[F] &= ~Flags.C; }
 
         // Set flags for ADC operation
@@ -191,6 +191,9 @@ export class Z80 implements CPU {
             }
             if (result & 0x8000) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
         }
+
+        this.r8[F] &= 0b11010111
+        this.r8[F] |= (result >> 8) & 0b00101000;
 
         return result;
     }
@@ -266,8 +269,9 @@ export class Z80 implements CPU {
         // Set Zero flag if result is zero
         if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
 
-        // Set sign if the result has its sign bit set (2-complement)
-        if (this.r8[A] & 0x80) { this.r8[F] |= Flags.S; } else { this.r8[F] &= ~Flags.S; }
+        // Set Sign / F3 / F5 are copies of the result
+        this.r8[F] &= ~Flags.S_F5_F3;           // Reset bits
+        this.r8[F] |= (this.r8[A] & Flags.S_F5_F3); // Set bits if set in the result
 
         // Set parity if even
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
@@ -534,16 +538,16 @@ export class Z80 implements CPU {
 
         let temp = this.r8[F];
         this.addSub8(this.r8[A], val, true, false);
-        if (temp  & Flags.C) { this.r8[F] |= Flags.C; }  else { this.r8[F] &= ~Flags.C; }
+        if (temp & Flags.C) { this.r8[F] |= Flags.C; } else { this.r8[F] &= ~Flags.C; }
 
         // Undocumented behavior (see Z80.js)
         //flags.Y = ((a - read_value - flags.H) & 0x02) >>> 1;
         //flags.X = ((a - read_value - flags.H) & 0x08) >>> 3;
-        
+
         if (inc) {
             this.r16[HL]++;
         } else {
-            this.r16[HL]--;            
+            this.r16[HL]--;
         }
 
         this.r16[BC]--;
@@ -596,7 +600,7 @@ export class Z80 implements CPU {
         }
 
         if ((this.r8[A] & 0x10) ^ (val & 0x10)) { this.r8[F] |= Flags.H; } else { this.r8[F] &= ~Flags.H; }
-        
+
         this.r8[A] = val;
         if (this.evenParity[this.r8[A]]) { this.r8[F] |= Flags.PV; } else { this.r8[F] &= ~Flags.PV; }
         if (this.r8[A] === 0) { this.r8[F] |= Flags.Z; } else { this.r8[F] &= ~Flags.Z; }
@@ -616,7 +620,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
-                this.log(this.r16[PC] - 1, `Unknown opcode ED ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode ED ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -627,7 +631,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
-                this.log(this.r16[PC] - 1, `Unknown opcode DD ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode DD ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -637,7 +641,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
-                this.log(this.r16[PC] - 1, `Unknown opcode FD ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode FD ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -647,7 +651,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr);
             } else {
-                this.log(this.r16[PC] - 1, `Unknown opcode CB ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode CB ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -658,7 +662,7 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr, o);
             } else {
-                this.log(this.r16[PC] - 2, `Unknown opcode DDCB ${o} ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode DDCB ${o} ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
@@ -669,16 +673,12 @@ export class Z80 implements CPU {
             if (func) {
                 func(addr, o);
             } else {
-                this.log(this.r16[PC] - 2, `Unknown opcode FDCB ${o} ${opcode.toString(16)}`);
+                //console.error(`Unknown opcode FDCB ${o} ${opcode.toString(16)}`);
                 this.opcodes[0x00](addr);
             }
         }
 
-
         this.addOpcodes();
-
-
-
     }
 
     interrupt(): void {
@@ -692,7 +692,7 @@ export class Z80 implements CPU {
             this.r16[PC] = 0x0038;
         }
     }
-    
+
     private log(address: number, msg: string): void {
         if (this.logging) {
             this.logger.debug(
