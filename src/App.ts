@@ -64,12 +64,6 @@ let fillBuffer = function (e: any) {
     return true;
 }
 
-let debugBuffer = '';
-
-function wait(ms: number) {
-    return new Promise<void>((res, rej) => setTimeout(() => res(), ms));
-}
-
 async function reset() {
     //let response = await fetch('cbios_main_msx1.rom');
     let response = await fetch('MSX1.ROM');
@@ -149,18 +143,7 @@ async function reset() {
                     return slots.getSlotSelector();
                 case 0xa9:
                     return ppi.readA9();
-                case 0xd0:
-                case 0xd1:
-                case 0xd2:
-                case 0xd3:
-                case 0xd4:
-                case 0xd5:
-                case 0xd6:
-                case 0xd7:
-                    console.log(`Read of ${address.toString(16)}`);
-                    return 0xff;
                 default:
-                    //console.log(`Port read not implemented ${address.toString(16)}`);
                     return 0xff;
             }
         }
@@ -171,14 +154,12 @@ async function reset() {
                     vdp.write(false, value);
                     break;
                 case 0x99:
-                    //console.log(`vdp write 0x${value.toString(16)}`);
                     vdp.write(true, value);
                     break;
                 case 0xa0:
                     this.psgRegister = value;
                     break;
                 case 0xa1:
-                    //psg.write(value);
                     this.psgRegisters[this.psgRegister] = value;
                     ay3.updateState(this.psgRegisters);
                     break;
@@ -190,32 +171,7 @@ async function reset() {
                 case 0xaa:
                     ppi.writeAA(value);
                     break;
-                case 0x7d:
-                    console.debug("Check program counter");
-                    break;
-                case 0xd0:
-                case 0xd1:
-                case 0xd2:
-                case 0xd3:
-                case 0xd4:
-                case 0xd5:
-                case 0xd6:
-                case 0xd7:
-                    console.log(`Write of ${address.toString(16)}:${value.toString(16)}`);
-                    break;
-
-                case 0x20:
-                    throw new Error('Invalid')
-                case 0x2e:
-                case 0x2f:
-                    //console.log(`Debug info ${address.toString(16)}, ${value}, ${String.fromCharCode(value)}`)
-                    if (value == 0) {
-                        console.log(debugBuffer);
-                    } else {
-                        debugBuffer += String.fromCharCode(value);
-                    }
                 default:
-                    //console.log(`Port write not implemented ${address.toString(16)}`);
                     break;
             }
         }
@@ -247,7 +203,7 @@ async function reset() {
 async function run() {
     setInterval(() => {
         let cycles = 0;
-        // 
+
         while (cycles < CyclesPerInterrupt) {
             cycles += z80.run_instruction();
         }
