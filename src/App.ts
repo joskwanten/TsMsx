@@ -19,10 +19,18 @@ function changeBackground(c: number) {
         element.style.backgroundColor = color;
     }
 }
+
+const Hz = 60;
+const MHz = 3.56;
+const CyclesPerInterrupt = (MHz * 1000000) / Hz;
+const loopTime = 1000 / Hz;
+
 let z80: any = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
+
+
 ay3.configure(false, 1789772, 44100);
 ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
@@ -63,8 +71,8 @@ function wait(ms: number) {
 }
 
 async function reset() {
-    let response = await fetch('cbios_main_msx1.rom');
-    //let response = await fetch('MSX1.ROM');
+    //let response = await fetch('cbios_main_msx1.rom');
+    let response = await fetch('MSX1.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let biosMemory = new Uint8Array(0x10000);
@@ -238,16 +246,14 @@ async function reset() {
 
 async function run() {
     setInterval(() => {
-        if (z80) {
-            z80.logging = true;
-            let cycles = 0;
-            while (cycles < 60000) {
-                cycles += z80.run_instruction();
-            }
-
-            vdp.checkAndGenerateInterrupt(Date.now());
+        let cycles = 0;
+        // 
+        while (cycles < CyclesPerInterrupt) {
+            cycles += z80.run_instruction();
         }
-    }, 16.67);
+
+        vdp.checkAndGenerateInterrupt(Date.now());
+    }, loopTime);
 }
 
 reset().then(() => {
