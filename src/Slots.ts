@@ -32,19 +32,7 @@ export class Slots implements Memory, SlotSelector  {
         return this.selectedSlot(address).uread8(address);
     }
 
-    read8(address: number): number {
-        return this.selectedSlot(address).read8(address);
-    }
-
-    uread16(address: number): number {
-        return this.selectedSlot(address).uread16(address);
-    }
-
     uwrite8(address: number, value: number): void {
         this.selectedSlot(address).uwrite8(address, value);
-    }
-
-    uwrite16(address: number, value: number): void {
-        this.selectedSlot(address).uwrite16(address, value);
     }
 }

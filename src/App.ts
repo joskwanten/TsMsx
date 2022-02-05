@@ -36,11 +36,10 @@ ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
 ay3.setPan(2, 0.5, false);
 
-//let psg = new AY_3_8910();
 
 let scc: SoundDevice;
 
-let fillBuffer = function (e: any) {
+let fillSoundBuffer = function (e: any) {
     var left = e.outputBuffer.getChannelData(0);
     var right = e.outputBuffer.getChannelData(1);
     for (var i = 0; i < left.length; i++) {
@@ -78,21 +77,6 @@ async function reset() {
     let logo = new Uint8Array(buffer);
     logo.forEach((b, i) => biosMemory[i + 0x8000] = b);
 
-    // let response = await fetch('cbios_main_msx1.rom');
-    // //let response = await fetch('MSX1.ROM');
-    // let buffer = await response.arrayBuffer();
-    // let bios = new Uint8Array(buffer);
-    // let biosMemory = new Uint8Array(0x10000);
-    // bios.forEach((b, i) => biosMemory[i] = b);
-
-    // response = await fetch('games/QBERT.ROM');
-    // buffer = await response.arrayBuffer();
-    // let game = new Uint8Array(buffer);
-    // let gameMemory = new Uint8Array(0x10000);
-    // gameMemory.forEach((b, i) => gameMemory[i] = 0);
-    // game.forEach((g, i) => gameMemory[i + 0x4000] = g);
-    // let slot1 = new Rom(gameMemory);
-
     const queryString = window.location.search.replace(/\?/, '');
 
     let slot1;
@@ -112,20 +96,13 @@ async function reset() {
         }
     }
 
-    // response = await fetch('cbios_disk.rom');
-    // buffer = await response.arrayBuffer();
-    // let diskrom = new Uint8Array(buffer);
-    // let diskMemory = new Uint8Array(0x10000);
-    // diskrom.forEach((b, i) => diskMemory[i + 0x8000] = b);
-    // let slot3sub1 = new Rom(diskMemory);
-
+    // Define the MSX slots and sub-slots (slot 3)
     let slot0 = new Rom(biosMemory);
     slot1 = slot1 ? slot1 : new EmptySlot();
     let slot2 = new EmptySlot();
     let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
 
-    let buf = "";
     class IoBus implements IO {
         psgRegister = 0;
         psgRegisters = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -175,14 +152,6 @@ async function reset() {
                     break;
             }
         }
-    }
-
-    class ConsoleLogger implements Logger {
-        debug(str: string, registers: Registers): void {
-            console.log(str);
-            console.log(registers);
-        }
-
     }
 
     let io = new IoBus();
@@ -255,7 +224,7 @@ window.onload = () => {
             var audioContext = new AudioContext();
 
             var audioNode = audioContext.createScriptProcessor(512, 0, 2);
-            audioNode.onaudioprocess = fillBuffer;
+            audioNode.onaudioprocess = fillSoundBuffer;
             audioNode.connect(audioContext.destination);
             soundButton?.setAttribute("style", "display:none;");
         });
