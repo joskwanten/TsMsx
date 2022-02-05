@@ -64,7 +64,7 @@ let fillSoundBuffer = function (e: any) {
 }
 
 async function reset() {
-    //let response = await fetch('cbios_main_msx1.rom');
+    // let response = await fetch('cbios_main_msx1.rom');
     let response = await fetch('MSX1.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
@@ -72,7 +72,6 @@ async function reset() {
     bios.forEach((b, i) => biosMemory[i] = b);
 
     response = await fetch('cbios_logo_msx1.rom');
-    //let response = await fetch('MSX1.ROM');
     buffer = await response.arrayBuffer();
     let logo = new Uint8Array(buffer);
     logo.forEach((b, i) => biosMemory[i + 0x8000] = b);
@@ -114,7 +113,6 @@ async function reset() {
                 case 0x99:
                     return vdp.read(true);
                 case 0xa02:
-                    //return psg.read();
                     return this.psgRegisters[this.psgRegister];
                 case 0xa8:
                     return slots.getSlotSelector();
@@ -227,6 +225,12 @@ window.onload = () => {
             audioNode.onaudioprocess = fillSoundBuffer;
             audioNode.connect(audioContext.destination);
             soundButton?.setAttribute("style", "display:none;");
+        });
+
+        let fullscreenButton = document.querySelector('#fullscreen');
+        fullscreenButton?.addEventListener('click', async (e) => {
+            let body = document.querySelector('body');
+            body?.requestFullscreen();
         });
     }
 }
