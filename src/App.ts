@@ -3,7 +3,7 @@ import { SubSlotSelector } from './SubSlotSelector.js';
 import { Rom } from './Rom.js';
 import { IO } from './IO.js';
 import { Logger, Registers } from './Logger.js';
-import { Z80 } from './z80_generated.js';
+import * as Z80 from './Z80.js';
 import { Slots } from './Slots.js';
 import { EmptySlot } from './EmptySlot.js';
 import { Ram } from './Ram.js';
@@ -19,7 +19,7 @@ function changeBackground(c: number) {
         element.style.backgroundColor = color;
     }
 }
-let z80: Z80 | null = null;
+let z80: any = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
@@ -222,16 +222,27 @@ async function reset() {
     }
 
     let io = new IoBus();
-    z80 = new Z80(slots, io, new ConsoleLogger());
+
+    // Wrapper object to use Z80.js
+    let core = {
+        mem_read: (address: number) => slots.uread8(address),
+        mem_write: (address: number, value: number) => slots.uwrite8(address, value),
+        io_read: (address: number) => io.read8(address & 0xff),
+        io_write: (address: number, value: number) => io.write8(address & 0xff, value)
+
+    }
+
+    z80 = Z80.Z80(core);
+    z80.reset();
 }
 
 async function run() {
     setInterval(() => {
         if (z80) {
             z80.logging = true;
-            let lastCycles = z80.cycles;
-            while ((z80.cycles - lastCycles) < 60000) {
-                z80.executeSingleInstruction();
+            let cycles = 0;
+            while (cycles < 60000) {
+                cycles += z80.run_instruction();
             }
 
             vdp.checkAndGenerateInterrupt(Date.now());

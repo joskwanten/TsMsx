@@ -1,5 +1,4 @@
 import { Memory } from './Memory.js';
-import { E } from './z80_generated.js';
 
 export class KonamiMegaRomSCC implements Memory, SoundDevice {
 
