@@ -10,7 +10,7 @@ import { Ram } from './Ram.js';
 import { PPI } from './PPI.js';
 import { KonamiMegaRomSCC } from './KonamiMegaRomSCC.js';
 import { AY_3_8910 } from './AY-3-8910.js';
-
+import { RP_5C10_RTC } from './RP-5C10_RTC.js';
 
 function changeBackground(c: number) {
     let element: any = document.querySelector('.backdrop');
@@ -29,7 +29,7 @@ let z80: any = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
-
+let rtc = new RP_5C10_RTC();
 
 ay3.configure(false, 1789772, 44100);
 ay3.setPan(0, 0.5, false);
@@ -65,16 +65,17 @@ let fillSoundBuffer = function (e: any) {
 
 async function reset() {
     // let response = await fetch('cbios_main_msx1.rom');
-    let response = await fetch('system/MSX1.ROM');
+    let response = await fetch('system/NMS8245/MSX2.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('system/cbios_logo_msx1.rom');
+    let slot30Memory = new Uint8Array(0x10000);
+    response = await fetch('system/NMS8245/MSX2EXT.ROM');
     buffer = await response.arrayBuffer();
-    let logo = new Uint8Array(buffer);
-    logo.forEach((b, i) => biosMemory[i + 0x8000] = b);
+    let msx2ext = new Uint8Array(buffer);
+    msx2ext.forEach((b, i) => slot30Memory[i] = b);
 
     const queryString = window.location.search.replace(/\?/, '');
 
@@ -101,7 +102,7 @@ async function reset() {
     let slot0 = new Rom(biosMemory);
     slot1 = slot1 ? slot1 : new EmptySlot();
     let slot2 = new EmptySlot();
-    let slot3 = new SubSlotSelector([new EmptySlot(), new EmptySlot(), new Ram(), new EmptySlot()]);
+    let slot3 = new SubSlotSelector([new Rom(slot30Memory), new EmptySlot(), new Ram(), new EmptySlot()]);
     let slots = new Slots([slot0, slot1, slot2, slot3]);
 
     class IoBus implements IO {
@@ -120,6 +121,8 @@ async function reset() {
                     return slots.getSlotSelector();
                 case 0xa9:
                     return ppi.readA9();
+                case 0xb5:
+                    return rtc.readRegister();
                 default:
                     return 0xff;
             }
@@ -147,6 +150,12 @@ async function reset() {
                     break;
                 case 0xaa:
                     ppi.writeAA(value);
+                    break;
+                case 0xb4:
+                    rtc.selectRegister(value);
+                    break;
+                case 0xb5:
+                    rtc.writeRegister(value);
                     break;
                 default:
                     break;
