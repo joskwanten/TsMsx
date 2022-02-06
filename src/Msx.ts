@@ -65,13 +65,13 @@ let fillSoundBuffer = function (e: any) {
 
 async function reset() {
     // let response = await fetch('cbios_main_msx1.rom');
-    let response = await fetch('MSX1.ROM');
+    let response = await fetch('system/MSX1.ROM');
     let buffer = await response.arrayBuffer();
     let bios = new Uint8Array(buffer);
     let biosMemory = new Uint8Array(0x10000);
     bios.forEach((b, i) => biosMemory[i] = b);
 
-    response = await fetch('cbios_logo_msx1.rom');
+    response = await fetch('system/cbios_logo_msx1.rom');
     buffer = await response.arrayBuffer();
     let logo = new Uint8Array(buffer);
     logo.forEach((b, i) => biosMemory[i + 0x8000] = b);
