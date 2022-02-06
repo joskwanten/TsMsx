@@ -20,24 +20,7 @@ export class KonamiMegaRom implements Memory {
         return this.memory[(page * this.pageSize) + (address % this.pageSize)];
     }
 
-    read8(address: number): number {
-        let pageIndex = (address >>> 13) % 8;
-        let page = this.selectedPages[pageIndex];
-        return this.memorys[(page * this.pageSize) + (address % this.pageSize)];
-    }
-
-    uread16(address: number): number {
-        let pageIndex = (address >>> 13) % 8;
-        let page = this.selectedPages[pageIndex];
-        return this.memory[(page * this.pageSize) + (address % this.pageSize)] 
-            + (this.memory[(page * this.pageSize) + (address % this.pageSize) + 1] << 8);
-    }
-
     uwrite8(address: number, value: number): void {
         this.selectedPages[(address >>> 13) % 8] = value;
-    }
-
-    uwrite16(address: number, value: number): void {
-        // Not implemented
     }
 }
