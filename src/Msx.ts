@@ -78,6 +78,8 @@ async function reset() {
 
     const queryString = window.location.search.replace(/\?/, '');
 
+    // http://localhost:3000/index.html?slot0=msx1.rom@0,msx1.logo@0x8000&slot1=TEST.ROM
+
     let slot1;
     if (queryString) {
         console.log(queryString);
@@ -183,6 +185,10 @@ reset().then(() => {
     run();
 });
 
+window.onpopstate = function (event) {
+    alert("location: " + document.location + ", state: " + JSON.stringify(event.state));
+};
+
 window.onload = () => {
     const canvas = <HTMLCanvasElement>document.getElementById('screen');
     const ctx = canvas.getContext('2d');
@@ -231,6 +237,26 @@ window.onload = () => {
         fullscreenButton?.addEventListener('click', async (e) => {
             let body = document.querySelector('body');
             body?.requestFullscreen();
+            
+        });
+
+        let scale2xButton = document.querySelector('#scale2x');
+        scale2xButton?.addEventListener('click', async (e) => {
+            canvas?.setAttribute("style", "transform: scale(2);");
+        });
+
+        let scale3xButton = document.querySelector('#scale3x');
+        scale3xButton?.addEventListener('click', async (e) => {
+            canvas?.setAttribute("style", "transform: scale(3);");
         });
     }
 }
+
+document.addEventListener('fullscreenchange', (event) => {
+    let fullscreenButton = document.querySelector('#fullscreen');
+    if (document.fullscreenElement) {
+        fullscreenButton?.setAttribute("style", "display:none;");
+    } else {
+        fullscreenButton?.setAttribute("style", "display:unset;");
+    }
+});

@@ -5,7 +5,7 @@ import { Memory } from './Memory.js'
 export class Slots implements Memory, SlotSelector  {
     slotRegister: number = 0x00; // Startup condition slot 0 is selected to start the ROM
     constructor(private slots: Memory[]) {
-        console.log(slots.length);
+       
     }
     getSlotSelector(): number {
         return this.slotRegister;
