@@ -36,6 +36,8 @@ export class V9938 {
     renderedImage = new Uint32Array(256 * 212);
     spriteDetectionBuffer = new Uint8Array(256 * 212);
 
+    paletteRegisterFirstByte: number | undefined = undefined;
+
     palette = [
         0x00000000,
         0x000000ff,
@@ -111,6 +113,30 @@ export class V9938 {
         return (this.registers[1] & 0x20) != 0;
     }
 
+    getAndIncrementControlRegister() {
+        let index = this.registers[17] & 0x3f;
+        if (this.registers[17] & 0x80) {
+            // If auto incrementing is set, increment the index
+            // to the control register
+            this.registers[17] = 0x80 | ((index + 1) & 0x3f);
+        }
+
+        return index;
+    }
+
+    getAndIncrementPaletteRegister() {
+        let index = this.registers[16] & 0x0f;
+        this.registers[16] = ((index + 1) & 0xf);
+        return index;
+    }
+
+    convert3To8Bit(color: number) {
+        // Convert a 3 bits color value to 8 bits 
+        // e.g. we want to convert 7 to 255 so
+        // therefore we multiply by 36.5
+        return Math.floor((color & 7) * 36.5);
+    }
+
     Mode() {
         let m1 = (this.registers[1] & 0x10) >>> 4;
         let m3 = (this.registers[1] & 0x08) >>> 1;
@@ -153,16 +179,28 @@ export class V9938 {
     }
 
     private write2(value: number) {
-
+        if (this.paletteRegisterFirstByte) {
+            let blue = this.convert3To8Bit(this.paletteRegisterFirstByte & 7);
+            let red = this.convert3To8Bit((this.paletteRegisterFirstByte >>> 4) & 7);
+            let green = this.convert3To8Bit(value & 7);
+            let rgba = (red << 24 + green << 16 + blue << 8 + 0xff);
+            this.palette[this.getAndIncrementPaletteRegister()] = rgba;
+            this.paletteRegisterFirstByte = undefined;
+        } else {
+            this.paletteRegisterFirstByte = value;
+        }
     }
 
     private write3(value: number) {
-
+        let index = this.getAndIncrementControlRegister();
+        if (index !== 17) {
+            this.registers[index] = value;
+        }
     }
 
 
     write(mode: number, value: number) {
-        switch(mode & 3) {
+        switch (mode & 3) {
             case 0:
                 return this.write0(value);
             case 1:
@@ -196,7 +234,7 @@ export class V9938 {
 
     read(mode: number): number {
         this.hasLatchedData = false;
-        switch(mode & 3) {
+        switch (mode & 3) {
             case 0:
                 return this.read0();
             case 1:
