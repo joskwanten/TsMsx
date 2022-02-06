@@ -1,4 +1,4 @@
-import { TMS9918 } from './TMS9918.js';
+import { V9938 } from './V9938.js';
 import { SubSlotSelector } from './SubSlotSelector.js';
 import { Rom } from './Rom.js';
 import { IO } from './IO.js';
@@ -26,7 +26,7 @@ const CyclesPerInterrupt = (MHz * 1000000) / Hz;
 const loopTime = 1000 / Hz;
 
 let z80: any = null;
-let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
+let vdp = new V9938(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 let ay3 = new AY_3_8910();
 let rtc = new RP_5C10_RTC();
@@ -112,9 +112,13 @@ async function reset() {
         read8(address: number): number {
             switch (address) {
                 case 0x98:
-                    return vdp.read(false);
+                    return vdp.read(0);
                 case 0x99:
-                    return vdp.read(true);
+                    return vdp.read(1);
+                case 0x9a:
+                    return vdp.read(2);
+                case 0x9b:
+                    return vdp.read(3);
                 case 0xa02:
                     return this.psgRegisters[this.psgRegister];
                 case 0xa8:
@@ -131,10 +135,16 @@ async function reset() {
         write8(address: number, value: number): void {
             switch (address) {
                 case 0x98:
-                    vdp.write(false, value);
+                    vdp.write(0, value);
                     break;
                 case 0x99:
-                    vdp.write(true, value);
+                    vdp.write(1, value);
+                    break;
+                case 0x9a:
+                    vdp.write(2, value);
+                    break;
+                case 0x9b:
+                    vdp.write(3, value);
                     break;
                 case 0xa0:
                     this.psgRegister = value;
@@ -246,7 +256,7 @@ window.onload = () => {
         fullscreenButton?.addEventListener('click', async (e) => {
             let body = document.querySelector('body');
             body?.requestFullscreen();
-            
+
         });
 
         let scale2xButton = document.querySelector('#scale2x');

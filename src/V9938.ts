@@ -23,9 +23,9 @@ enum StatusFlags {
     S_FS0 = 0b00000001,
 };
 
-export class TMS9918 {
-    registers = new Uint8Array(8);
-    vram = new Uint8Array(0x4000);
+export class V9938 {
+    registers = new Uint8Array(64);
+    vram = new Uint8Array(0x20000);
     vramAddress = 0;
     vdpStatus = 0;
     refreshRate = 60; // NTSC
@@ -118,55 +118,96 @@ export class TMS9918 {
         return (m3 | m2 | m1);
     }
 
-    write(mode: boolean, value: number) {
-        if (mode) {
-            if (!this.hasLatchedData) {
+    private write0(value: number) {
+        this.hasLatchedData = false;
+        this.vram[this.vramAddress] = value;
+        this.vramAddress = (this.vramAddress + 1) % 0x20000;
+    }
 
-                this.latchedData = value;
-                this.hasLatchedData = true;
-
-            } else {
-
-                this.hasLatchedData = false;
-
-                if (value & 0x80) {
-                    // Write to register
-                    let register = value & 0x7;
-                    this.registers[register] = this.latchedData;
-
-                    if (register == 7) {
-                        let c = this.palette[this.getBackdropColor()];
-                        this.backdropChangedFunc(c);
-                    }
-                } else if (value & 0x40) {
-                    // Setup video write address
-                    this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-                } else {
-                    // Setup video read address (internally the same)
-                    this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
-
-                }
-            }
+    private write1(value: number) {
+        if (!this.hasLatchedData) {
+            this.latchedData = value;
+            this.hasLatchedData = true;
         } else {
+
             this.hasLatchedData = false;
-            // Mode = 0 means writing to video memory
-            this.vram[this.vramAddress] = value;
-            this.vramAddress = (this.vramAddress + 1) % 0x4000;
+
+            if (value & 0x80) {
+                // Write to register
+                let register = value & 0x3f;
+                this.registers[register] = this.latchedData;
+
+                if (register == 7) {
+                    let c = this.palette[this.getBackdropColor()];
+                    this.backdropChangedFunc(c);
+                }
+            } else if (value & 0x40) {
+                // Setup video write address
+                this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
+            } else {
+                // Setup video read address (internally the same)
+                this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
+
+            }
         }
     }
 
-    read(mode: boolean): number {
-        this.hasLatchedData = false;
+    private write2(value: number) {
 
-        if (mode) {
-            let value = this.vdpStatus;
-            this.vdpStatus = 0;
-            return value;
-        } else {
-            let value = this.vram[this.vramAddress];
-            this.vramAddress = (this.vramAddress + 1) % 16384;
-            return value;
+    }
+
+    private write3(value: number) {
+
+    }
+
+
+    write(mode: number, value: number) {
+        switch(mode & 3) {
+            case 0:
+                return this.write0(value);
+            case 1:
+                return this.write1(value);
+            case 2:
+                return this.write2(value);
+            case 3:
+                return this.write3(value);
         }
+    }
+
+    private read0() {
+        let value = this.vram[this.vramAddress];
+        this.vramAddress = (this.vramAddress + 1) % 16384;
+        return value;
+    }
+
+    private read1() {
+        let value = this.vdpStatus;
+        this.vdpStatus = 0;
+        return value;
+    }
+
+    private read2() {
+        return 0x00;
+    }
+
+    private read3() {
+        return 0x00;
+    }
+
+    read(mode: number): number {
+        this.hasLatchedData = false;
+        switch(mode & 3) {
+            case 0:
+                return this.read0();
+            case 1:
+                return this.read1();
+            case 2:
+                return this.read2();
+            case 3:
+                return this.read3();
+        }
+        // Cannot be reached, but the typescript compiler is not smart enough to know that
+        return 0;
     }
 
     checkAndGenerateInterrupt(time: number) {
