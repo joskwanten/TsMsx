@@ -25,6 +25,16 @@ enum StatusFlags {
     S_FS0 = 0b00000001,
 };
 
+enum Reg9 {
+    LN = 0b10000000,
+    S1 = 0b00100000,
+    S0 = 0b00010000,
+    IL = 0b00001000,
+    E0 = 0b00000100,
+    NT = 0b00000010,
+    DC = 0b00000001,
+}
+
 export class V9938 {
     registers = new Uint8Array(64);
     statusRegisters = new Uint8Array(16); // Only 10 used used
@@ -148,10 +158,9 @@ export class V9938 {
     }
 
     Mode() {
-        let m1 = (this.registers[1] & 0x10) >>> 4;
-        let m3 = (this.registers[1] & 0x08) >>> 1;
-        let m2 = (this.registers[0] & 0x02);
-        return (m3 | m2 | m1);
+        let ml = (this.registers[1] & 0b11000) >>> 3;
+        let mh = (this.registers[0] & 0b01110) << 1;
+        return (ml | mh);
     }
 
     private write0(value: number) {
@@ -288,13 +297,38 @@ export class V9938 {
         if (this.getBlank()) {
             //  Blank done
         } else if (this.Mode() == 1) {
+            // Screen 0 Width 40
             this.renderScreen0(image);
+
+        } else if (this.Mode() == 17) {
+            // Screen 0 Width 80
+            console.log('Screen 0 / T2');
+        } else if (this.Mode() == 2) {
+            // Screen 3
+            console.log('Screen 3 / MC');
         } else if (this.Mode() == 0) {
+            // Screen 1
             this.renderScreen1(image);
             this.renderSprites(image);
-        } else if (this.Mode() == 2) {
+        } else if (this.Mode() == 4) {
+            // Screen 2 (Graphics 2)
             this.renderScreen2(image);
             this.renderSprites(image);
+        } else if (this.Mode() == 8) {
+            // Screen 4 (Graphics 3)
+            console.log('Screen 4 / G3');
+        } else if (this.Mode() == 12) {
+            console.log('Screen 5 / G4');
+        } else if (this.Mode() == 16) {
+            console.log('Screen 6 / G5');
+            const height = (this.registers[9] & Reg9.LN) !== 0 ? 212 : 192;
+        } else if (this.Mode() == 20) {
+            console.log('Screen 7 / G6');
+        } else if (this.Mode() == 28) {
+            console.log('Screen 8 / G7');
+        }else {
+            //this.renderScreen4(image);
+            //this.renderSprite4(image);
         }
     }
 
