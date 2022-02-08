@@ -25,9 +25,9 @@ enum StatusFlags {
 
 export class V9938 {
     registers = new Uint8Array(64);
+    statusRegisters = new Uint8Array(16); // Only 10 used used
     vram = new Uint8Array(0x20000);
     vramAddress = 0;
-    vdpStatus = 0;
     refreshRate = 60; // NTSC
     lastRefresh = 0;
 
@@ -137,6 +137,14 @@ export class V9938 {
         return Math.floor((color & 7) * 36.5);
     }
 
+    get vramBaseAddress() {
+        return (this.registers[14] & 0b111) << 14;
+    }
+
+    get statusRegisterPointer() {
+        return this.registers[15] & 0b1111;
+    }
+
     Mode() {
         let m1 = (this.registers[1] & 0x10) >>> 4;
         let m3 = (this.registers[1] & 0x08) >>> 1;
@@ -172,7 +180,10 @@ export class V9938 {
                 this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
             } else {
                 // Setup video read address (internally the same)
+                // Since this is an emulator the read / write
                 this.vramAddress = ((value & 0x3f) << 8) + this.latchedData;
+                // bit is not taken into account since we don't have to
+                // prefetch data
 
             }
         }
@@ -219,8 +230,10 @@ export class V9938 {
     }
 
     private read1() {
-        let value = this.vdpStatus;
-        this.vdpStatus = 0;
+        let value = this.statusRegisters[this.statusRegisterPointer];
+        if (this.statusRegisterPointer == 0) {
+            this.statusRegisters[0] = 0;
+        }
         return value;
     }
 
@@ -255,11 +268,11 @@ export class V9938 {
 
         //  IF interrupts are enabled set the S_INT flag
         if (this.GINT()) {
-            this.vdpStatus |= StatusFlags.S_INT;
+            this.statusRegisters[0] |= StatusFlags.S_INT;
         }
         //}
 
-        if (this.vdpStatus & StatusFlags.S_INT) {
+        if (this.statusRegisters[0] & StatusFlags.S_INT) {
             this.interruptFunction();
         }
     }
@@ -418,7 +431,7 @@ export class V9938 {
                             if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
                                 image[(256 * ypos) + xpos] = this.palette[c];
                                 if (this.spriteDetectionBuffer[(256 * ypos) + xpos]) {
-                                    this.vdpStatus |= StatusFlags.S_C;
+                                    this.statusRegisters[0] |= StatusFlags.S_C;
                                 } else {
                                     this.spriteDetectionBuffer[(256 * ypos) + xpos] = s + 1;
                                 }
@@ -436,7 +449,7 @@ export class V9938 {
                             if (ypos >= 0 && ypos < 208 && xpos >= 0 && xpos <= 255) {
                                 image[(256 * ypos) + xpos] = this.palette[c];
                                 if (this.spriteDetectionBuffer[(256 * ypos) + xpos]) {
-                                    this.vdpStatus |= StatusFlags.S_C;
+                                    this.statusRegisters[0] |= StatusFlags.S_C;
                                 } else {
                                     this.spriteDetectionBuffer[(256 * ypos) + xpos] = s + 1;
                                 }
