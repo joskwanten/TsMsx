@@ -1,14 +1,16 @@
 /*
 Reg/Bit	7	    6	    5	    4	    3	    2	    1	    0
-0	    -	    -	    -	    -	    -	    -	    M2	    EXTVID
-1	    4/16K	BL	    GINT	M1	    M3	    -	    SI	    MAG
+0	    0	    DG	    IE2	    IE1	    M5	    M4	    M3	    0
+1	    0   	BL	    IE0 	M1	    M2	    -	    SI	    MAG
 2	    -	    -	    -	    -	    PN13	PN12	PN11	PN10
 3	    CT13	CT12	CT11	CT10	CT9	    CT8	    CT7	    CT6
 4	    -	    -	    -	    -	    -	    PG13	PG12	PG11
 5	    -	    SA13	SA12	SA11	SA10	SA9	    SA8	    SA7
 6	    -	    -	    -	    -	    -	    SG13	SG12	SG11
 7	    TC3 	TC2	    TC1	    TC0	    BD3	    BD2	    BD1	    BD0
- 
+8       MS      LP      TP      CB      VR      0       SPD     BW
+9       LN      0       S1      S0      IL      E0      *NT     DC
+
 Status  INT	    5S	    C   	FS4	    FS3	    FS2	    FS1	    FS0
 */
 
