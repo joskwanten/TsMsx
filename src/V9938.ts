@@ -25,6 +25,22 @@ enum StatusFlags {
     S_FS0 = 0b00000001,
 };
 
+enum Status1Flags {
+    FL = 0b10000000,    // Light pen
+    LPS = 0b01000000,   // Light pen buttin
+    ID = 0b00111110,    // ID
+    FH = 0b00000001,    // FH
+}
+
+enum Status2Flags {
+    TR = 0b10000000, // Transfer ready
+    VR = 0b01000000, // Vertical retrace
+    HR = 0b00100000, // Horizontal retrace
+    BD = 0b00010000, // Color detect flag
+    EO = 0b00000010, // Display field flag
+    CE = 0b00000001, // Command execution flag
+}
+
 enum Reg9 {
     LN = 0b10000000,
     S1 = 0b00100000,
@@ -244,6 +260,8 @@ export class V9938 {
         let value = this.statusRegisters[this.statusRegisterPointer];
         if (this.statusRegisterPointer == 0) {
             this.statusRegisters[0] = 0;
+        } else if (this.statusRegisterPointer == 2) {
+            value |= Status2Flags.TR;
         }
         return value;
     }
@@ -326,7 +344,7 @@ export class V9938 {
             console.log('Screen 7 / G6');
         } else if (this.Mode() == 28) {
             console.log('Screen 8 / G7');
-        }else {
+        } else {
             //this.renderScreen4(image);
             //this.renderSprite4(image);
         }
