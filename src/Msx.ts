@@ -249,6 +249,11 @@ window.onload = () => {
         scale3xButton?.addEventListener('click', async (e) => {
             canvas?.setAttribute("style", "transform: scale(3);");
         });
+
+        let scale4xButton = document.querySelector('#scale4x');
+        scale4xButton?.addEventListener('click', async (e) => {
+            canvas?.setAttribute("style", "transform: scale(4);");
+        });
     }
 }
 
