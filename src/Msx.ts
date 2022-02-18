@@ -2,7 +2,6 @@ import { TMS9918 } from './TMS9918.js';
 import { SubSlotSelector } from './SubSlotSelector.js';
 import { Rom } from './Rom.js';
 import { IO } from './IO.js';
-import { Logger, Registers } from './Logger.js';
 import * as Z80 from './Z80.js';
 import { Slots } from './Slots.js';
 import { EmptySlot } from './EmptySlot.js';
@@ -31,7 +30,7 @@ let ppi = new PPI();
 let ay3 = new AY_3_8910();
 
 
-ay3.configure(false, 1789772, 44100);
+ay3.configure(false, (MHz * 1000000) / 2, 44100);
 ay3.setPan(0, 0.5, false);
 ay3.setPan(1, 0.5, false);
 ay3.setPan(2, 0.5, false);
