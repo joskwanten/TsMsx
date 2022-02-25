@@ -45,8 +45,8 @@ let fillSoundBuffer = function (e: any) {
         //left[i] = right[i] = psg.process();
         ay3.process();
         ay3.removeDC();
-        left[i] = ay3.left / 3;
-        right[i] = ay3.right / 3;
+        left[i] = ay3.left / 6;
+        right[i] = ay3.right / 6;
 
         if (scc) {
             let val = scc.process();
