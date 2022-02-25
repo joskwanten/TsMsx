@@ -27,13 +27,7 @@ const loopTime = 1000 / Hz;
 let z80: any = null;
 let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
-let ay3 = new AY_3_8910();
-
-
-ay3.configure(false, (MHz * 1000000) / 2, 44100);
-ay3.setPan(0, 0.5, false);
-ay3.setPan(1, 0.5, false);
-ay3.setPan(2, 0.5, false);
+let ay3 = new AY_3_8910((MHz * 1000000) / 2, 44100);
 
 
 let scc: SoundDevice;
@@ -44,7 +38,7 @@ let fillSoundBuffer = function (e: any) {
     for (var i = 0; i < left.length; i++) {
         //left[i] = right[i] = psg.process();
         ay3.process();
-        ay3.removeDC();
+        //ay3.removeDC();
         left[i] = ay3.left / 3;
         right[i] = ay3.right / 3;
 
