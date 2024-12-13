@@ -432,9 +432,9 @@ class AY_3_8910_Processor extends AudioWorkletProcessor {
         this.ay3.process();
         this.ay3.removeDC();
         outputChannel0[i] = this.ay3.left;
-        // if (output.length > 1) {
-        //   output[1][i] = this.ay3.right;
-        // }
+        if (output.length > 1) {
+          output[1][i] = this.ay3.right;
+        }
       }
     }
 

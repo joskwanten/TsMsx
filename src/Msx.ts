@@ -28,7 +28,7 @@ let vdp = new TMS9918(() => z80?.interrupt(), changeBackground);
 let ppi = new PPI();
 //let ay3 = new AY_3_8910();
 let ay3Node: any = null;
-let scc: SoundDevice;
+let sccNode: any = null;
 
 // let fillSoundBuffer = function (e: any) {
 //     var left = e.outputBuffer.getChannelData(0);
@@ -78,8 +78,9 @@ async function reset() {
     buffer = await response.arrayBuffer();
     let game = new Uint8Array(buffer);
     if (buffer.byteLength > 0x8000) {
-      slot1 = new KonamiMegaRomSCC(game, 44100);
-      scc = slot1;
+      slot1 = new KonamiMegaRomSCC(game, (reg, val) =>
+        sccNode?.port.postMessage([reg, val])
+      );
     } else {
       let gameMemory = new Uint8Array(0x10000);
       gameMemory.forEach((b, i) => (gameMemory[i] = 0));
@@ -228,18 +229,29 @@ window.onload = () => {
 
       // Add the worklet module
       await audioContext.audioWorklet.addModule("./src/AY-3-8910-processor.js");
+      await audioContext.audioWorklet.addModule("./src/SCC-processor.js");
 
       // Create the worklet node
       ay3Node = new AudioWorkletNode(audioContext, "AY-3-8910-processor", {
         outputChannelCount: [2],
       });
+      sccNode = new AudioWorkletNode(audioContext, "SCC-processor", {
+        outputChannelCount: [2],
+      });
+
+      const gainNodePSG = audioContext.createGain();
+      gainNodePSG.gain.setValueAtTime(0.3, audioContext.currentTime);
+
+      const gainNodeSCC = audioContext.createGain();
+      gainNodeSCC.gain.setValueAtTime(1, audioContext.currentTime);
 
       // Connect the node to the audio context
-      ay3Node.connect(audioContext.destination);
-
-      //   var audioNode = audioContext.createScriptProcessor(512, 0, 2);
-      //   audioNode.onaudioprocess = fillSoundBuffer;
-      ay3Node.connect(audioContext.destination);
+      ay3Node.connect(gainNodePSG);
+      sccNode.connect(gainNodeSCC)
+      
+      gainNodePSG.connect(audioContext.destination);
+      gainNodeSCC.connect(audioContext.destination);
+      
       soundButton?.setAttribute("style", "display:none;");
     });
 
