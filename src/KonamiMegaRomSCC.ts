@@ -41,7 +41,7 @@ export class KonamiMegaRomSCC implements Memory, SoundDevice {
         let val = 0;
         for (let chan = 0; chan < 5; chan++) {
             let f = this.getFrequency(chan);
-            let step = (32 * f) / 44100;
+            let step = (32 * f) / 48000;
             let pos = (Math.floor(step * this.time)) % 32;
             val += this.getWave(chan > 3 ? 3 : chan, pos) * this.getVolume(chan);
         }
