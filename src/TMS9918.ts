@@ -266,8 +266,10 @@ export class TMS9918 {
         let PG = this.getPatternGenerationTable();
         let PN = this.getPatternNameTable();
         let CT = this.getColorTable();
-        let mask = (this.registers[4] & 3) << 8; // Mask to select the appropriate table based on the register value
 
+        let colourMask = ((this.registers[3] & 0x7f) << 3 ) | 7;
+	    let patternMask = ((this.registers[4] & 3) << 8 ) | 0xff;
+    
         for (let y = 0; y < 192; y++) { // Loop over the 192 rows of pixels
             for (let x = 0; x < 256; x++) { // Loop over the 256 columns of pixels
                 // Determine the character based on the current pixel coordinates
@@ -276,14 +278,12 @@ export class TMS9918 {
                 let charIndex = (charY * 32) + charX; // Index in the pattern name table
 
                 // Select the correct pattern generation table based on the mask
-                let table = (charIndex & mask) >>> 8;
+                let table = y >> 6;
 
-                // Fetch the pattern and color data
-                let char = this.vram[PN + charIndex]; // Pattern name from the table
-                let offset = (table * 256 * 8) + (8 * char); // Offset for the pattern and color table
-                let pixelRow = y & 0x7; // Row within the character (0-7)
-                let patternRow = this.vram[PG + offset + pixelRow]; // Pattern row for the current pixel
-                let color = this.vram[CT + offset + pixelRow]; // Color data for the current row
+                // Fetch the pattern and color data                
+                let charcode = this.vram[PN + charIndex] + (( y >> 6 ) << 8 );                                
+                let patternRow = this.vram[PG +  (( charcode & patternMask ) << 3 ) + ( y & 7 )]; // Pattern row for the current pixel                
+                let color = this.vram[CT + (( charcode & colourMask ) << 3 ) + ( y & 7 )]; // Color data for the current row
                 let fg = color >>> 4; // Foreground color
                 let bg = color & 0xf; // Background color
 
