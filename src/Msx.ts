@@ -269,10 +269,10 @@ window.onload = () => {
             });
 
             const gainNodePSG = audioContext.createGain();
-            gainNodePSG.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNodePSG.gain.setValueAtTime(0.15, audioContext.currentTime);
 
             const gainNodeSCC = audioContext.createGain();
-            gainNodeSCC.gain.setValueAtTime(.2, audioContext.currentTime);
+            gainNodeSCC.gain.setValueAtTime(.15, audioContext.currentTime);
             ;
 
             // Connect the node to the audio context

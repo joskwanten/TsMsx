@@ -25,11 +25,13 @@ class SCC_Processor extends AudioWorkletProcessor {
             let f = this.getFrequency(chan);
             let step = (32 * f) / sampleRate;
             let pos = Math.floor(step * this.time) % 32;
-            val += this.getWave(chan > 3 ? 3 : chan, pos) * this.getVolume(chan);
+            let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
+            let vol =  this.getVolume(chan) / 15;
+            val += wave * vol;
         }
 
         this.time++;
-        val = val / 9600;
+        val /= 5;
 
         outputChannel0[i] = val;
         if (output.length > 1) {
