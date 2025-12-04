@@ -296,14 +296,16 @@ window.onload = () => {
         outputChannelCount: [2],
       });
 
-      const gainNodePSG = audioContext.createGain();
-      gainNodePSG.gain.setValueAtTime(0.6, audioContext.currentTime);
+            const gainNodePSG = audioContext.createGain();
+            gainNodePSG.gain.setValueAtTime(0.15, audioContext.currentTime);
 
-      const gainNodeSCC = audioContext.createGain();
-      gainNodeSCC.gain.setValueAtTime(1, audioContext.currentTime);
-      // Connect the node to the audio context
-      ay3Node.connect(gainNodePSG);
-      sccNode.connect(gainNodeSCC);
+            const gainNodeSCC = audioContext.createGain();
+            gainNodeSCC.gain.setValueAtTime(.15, audioContext.currentTime);
+            ;
+
+            // Connect the node to the audio context
+            ay3Node.connect(gainNodePSG);
+            sccNode.connect(gainNodeSCC);;
 
       gainNodePSG.connect(audioContext.destination);
 
