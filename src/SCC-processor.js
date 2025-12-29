@@ -26,7 +26,7 @@ class SCC_Processor extends AudioWorkletProcessor {
         }
       }
     };
-    this.phaseAccumulator = new Float64Array(5);
+    this.phaseAccumulator = new Uint32Array(5);
 
   }
 
@@ -42,16 +42,12 @@ class SCC_Processor extends AudioWorkletProcessor {
         let val = 0;
         for (let chan = 0; chan < 5; chan++) {
           let f = this.getFrequency(chan);
-          let step = (32 * f) / sampleRate;
+          let step = (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
           this.phaseAccumulator[chan] += step;
-          if (this.phaseAccumulator[chan] >= 32.0) {
-            this.phaseAccumulator[chan] -= 32.0;
-          }
-          let pos = Math.floor(this.phaseAccumulator[chan]);
+          let pos = this.phaseAccumulator[chan] >>> 27;
           let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
           let vol = this.getVolume(chan) / 15;
           val += wave * vol;
-
         }
 
         this.time++;
