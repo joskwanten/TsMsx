@@ -5,10 +5,29 @@ class SCC_Processor extends AudioWorkletProcessor {
     this.scc_u = new Uint8Array(this.scc.buffer);
     this.time = 0; // Counts 44100 per second
     this.port.onmessage = (event) => {
-        if (event.data && Array.isArray(event.data) && event.data.length === 2) {
-          this.scc[event.data[0]] = event.data[1];
+      if (event.data && Array.isArray(event.data) && event.data.length === 2) {
+        this.scc[event.data[0]] = event.data[1];
+        switch (event.data[0]) {
+          case 0x81:
+            this.phaseAccumulator[0] = 0;
+            break;
+          case 0x83:
+            this.phaseAccumulator[1] = 0;
+            break;
+          case 0x85:
+            this.phaseAccumulator[2] = 0;
+            break;
+          case 0x87:
+            this.phaseAccumulator[3] = 0;
+            break;
+          case 0x89:
+            this.phaseAccumulator[4] = 0;
+            break;
         }
-      };
+      }
+    };
+    this.phaseAccumulator = new Uint32Array(5);
+
   }
 
   process(inputs, outputs, parameters) {
@@ -18,16 +37,17 @@ class SCC_Processor extends AudioWorkletProcessor {
     if (output.length > 0) {
       const outputChannel0 = output[0];
       for (let i = 0; i < outputChannel0.length; i++) {
-        
+
         // Compute one sample
         let val = 0;
         for (let chan = 0; chan < 5; chan++) {
-            let f = this.getFrequency(chan);
-            let step = (32 * f) / sampleRate;
-            let pos = Math.floor(step * this.time) % 32;
-            let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
-            let vol =  this.getVolume(chan) / 15;
-            val += wave * vol;
+          let f = this.getFrequency(chan);
+          let step = (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
+          this.phaseAccumulator[chan] += step;
+          let pos = this.phaseAccumulator[chan] >>> 27;
+          let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
+          let vol = this.getVolume(chan) / 15;
+          val += wave * vol;
         }
 
         this.time++;
