@@ -3,7 +3,8 @@ class SCC_Processor extends AudioWorkletProcessor {
     super();
     this.scc = new Int8Array(0xff);
     this.scc_u = new Uint8Array(this.scc.buffer);
-    this.time = 0; // Counts 44100 per second
+    this.phase = new Uint32Array(5);
+    this.step = new Uint32Array(5);
     this.port.onmessage = (event) => {
       if (event.data && Array.isArray(event.data) && event.data.length === 2) {
         this.scc[event.data[0]] = event.data[1];
@@ -15,9 +16,6 @@ class SCC_Processor extends AudioWorkletProcessor {
         }
       }
     };
-
-    this.phase = new Uint32Array(5);
-    this.step = new Uint32Array(5);
   }
 
   computeStep(chan) {
@@ -30,12 +28,9 @@ class SCC_Processor extends AudioWorkletProcessor {
 
   process(inputs, outputs, parameters) {
     const output = outputs[0];
-
-    // Generate sine wave for each output channel
     if (output.length > 0) {
       const outputChannel0 = output[0];
       for (let i = 0; i < outputChannel0.length; i++) {
-        // Compute one sample
         let val = 0;
         for (let chan = 0; chan < 5; chan++) {
           this.phase[chan] += this.step[chan];
@@ -45,7 +40,6 @@ class SCC_Processor extends AudioWorkletProcessor {
           val += wave * vol;
         }
 
-        this.time++;
         val /= 5;
 
         outputChannel0[i] = val;
