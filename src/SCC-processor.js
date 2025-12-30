@@ -8,27 +8,44 @@ class SCC_Processor extends AudioWorkletProcessor {
       if (event.data && Array.isArray(event.data) && event.data.length === 2) {
         this.scc[event.data[0]] = event.data[1];
         switch (event.data[0]) {
+          case 0x80:
           case 0x81:
             this.phaseAccumulator[0] = 0;
+            this.step = this.computeStep(0);
             break;
+          case 0x82:
           case 0x83:
             this.phaseAccumulator[1] = 0;
+            this.step = this.computeStep(1);
             break;
+          case 0x84:
           case 0x85:
             this.phaseAccumulator[2] = 0;
+            this.step = this.computeStep(2);
             break;
+          case 0x86:
           case 0x87:
             this.phaseAccumulator[3] = 0;
+            this.step = this.computeStep(3);
             break;
+          case 0x88:
           case 0x89:
             this.phaseAccumulator[4] = 0;
+            this.step = this.computeStep(4);
             break;
         }
       }
     };
-    this.phaseAccumulator = new Uint32Array(5);
 
+    this.phaseAccumulator = new Uint32Array(5);
+    this.step = new Uint32Array(5);
   }
+
+  computeStep(chan) {
+    let t = (this.scc_u[0x80 + 2 * chan] + ((this.scc_u[0x80 + 2 * chan + 1] & 0xf) << 8));
+    let f =  3579545 / (32 * (t + 1));
+    return (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
+  };
 
   process(inputs, outputs, parameters) {
     const output = outputs[0];
@@ -41,9 +58,10 @@ class SCC_Processor extends AudioWorkletProcessor {
         // Compute one sample
         let val = 0;
         for (let chan = 0; chan < 5; chan++) {
-          let f = this.getFrequency(chan);
-          let step = (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
-          this.phaseAccumulator[chan] += step;
+          //let f = this.getFrequency(chan);
+          //let step = (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
+          //let step = this.computeStep(chan);
+          this.phaseAccumulator[chan] += this.computeStep(chan);
           let pos = this.phaseAccumulator[chan] >>> 27;
           let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
           let vol = this.getVolume(chan) / 15;
