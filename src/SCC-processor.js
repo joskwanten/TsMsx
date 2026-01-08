@@ -3,26 +3,29 @@ class SCC_Processor extends AudioWorkletProcessor {
     super();
     this.scc = new Int8Array(0xff);
     this.scc_u = new Uint8Array(this.scc.buffer);
-    this.phase = new Uint32Array(5);
-    this.step = new Uint32Array(5);
+    this.phase = new Uint32Array(15);
+    this.detuneScales = new Float32Array([0.9999, 1.0, 1.0001]);
+    this.step = new Uint32Array(15);
     this.port.onmessage = (event) => {
       if (event.data && Array.isArray(event.data) && event.data.length === 2) {
         this.scc[event.data[0]] = event.data[1];
         const addr = event.data[0];
         if (addr >= 0x80 && addr <= 0x89) {
           const chan = Math.floor((addr - 0x80) / 2);
-          this.phase[chan] = 0;
-          this.step[chan] = this.computeStep(chan);
+          for(let osc = 0; osc < 3; osc++) {
+            this.phase[(3 * chan) + osc] = 0;
+            this.step[(3 * chan) + osc] = this.computeStep(chan, this.detuneScales[osc]);
+          }
         }
       }
     };
   }
 
-  computeStep(chan) {
+  computeStep(chan, detune) {
     let t =
       this.scc_u[0x80 + 2 * chan] +
       ((this.scc_u[0x80 + 2 * chan + 1] & 0xf) << 8);
-    let f = 3579545 / (32 * (t + 1));
+    let f = (detune * 3579545) / (32 * (t + 1));
     return (((32 * f) / sampleRate) * (1 << 27)) >>> 0;
   }
 
@@ -32,15 +35,17 @@ class SCC_Processor extends AudioWorkletProcessor {
       const outputChannel0 = output[0];
       for (let i = 0; i < outputChannel0.length; i++) {
         let val = 0;
-        for (let chan = 0; chan < 5; chan++) {
-          this.phase[chan] += this.step[chan];
-          let pos = this.phase[chan] >>> 27;
-          let wave = this.getWave(chan > 3 ? 3 : chan, pos) / 128;
-          let vol = this.getVolume(chan) / 15;
-          val += wave * vol;
+        for (let osc = 0; osc < 3; osc++) {
+          for (let chan = 0; chan < 5; chan++) {
+            this.phase[(3 * chan) + osc] += this.step[(3 * chan) + osc];
+            let pos = this.phase[(3 * chan) + osc] >>> 27;
+            let wave = this.getWave(chan > 3 ? 3 : chan, pos);
+            let vol = this.getVolume(chan);
+            val += wave * vol;
+          }
         }
 
-        val /= 5;
+        val /= (3 * 9600); // Normalize beteen -1 and 1 -> -128..127 (sample) * 5 (channel) * 15 (volume)
 
         outputChannel0[i] = val;
         if (output.length > 1) {
