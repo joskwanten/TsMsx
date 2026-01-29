@@ -11,6 +11,7 @@ import { KonamiMegaRomSCC } from "./KonamiMegaRomSCC.js";
 import { Renderer } from "./Renderer.js";
 import { MemoryMapper } from "./MemoryMapper.js";
 import { Ascii16Rom } from "./Ascii16Rom.js";
+import { RogueDrive } from "./RogueDrive.js";
 
 function changeBackground(c: number) {
   let element: any = document.querySelector(".backdrop");
@@ -44,6 +45,12 @@ async function reset() {
   buffer = await response.arrayBuffer();
   let logo = new Uint8Array(buffer);
   logo.forEach((b, i) => (biosMemory[i + 0x8000] = b));
+
+  response = await fetch("system/nextor.dsk");
+  buffer = await response.arrayBuffer();
+  let nextor = new Uint8Array(buffer);
+
+  let rogueDrive = new RogueDrive([nextor]);
 
   const queryString = window.location.search.replace(/\?/, "");
 
@@ -99,7 +106,7 @@ async function reset() {
         case 0x63:
         case 0x64:
         case 0x65:
-          return 0;
+          return rogueDrive.io_read(address);
         case 0x98:
           return vdp.read(false);
         case 0x99:
@@ -130,6 +137,14 @@ async function reset() {
 
     write8(address: number, value: number): void {
       switch (address) {
+        case 0x60:
+        case 0x61:
+        case 0x62:
+        case 0x63:
+        case 0x64:
+          rogueDrive.io_write(address, value);
+          break;
+
         case 0x98:
           vdp.write(false, value);
           break;
