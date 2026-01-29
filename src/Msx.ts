@@ -9,6 +9,7 @@ import { Ram } from "./Ram.js";
 import { PPI } from "./PPI.js";
 import { KonamiMegaRomSCC } from "./KonamiMegaRomSCC.js";
 import { Renderer } from "./Renderer.js";
+import { MemoryMapper } from "./MemoryMapper.js";
 
 function changeBackground(c: number) {
   let element: any = document.querySelector(".backdrop");
@@ -35,6 +36,7 @@ async function reset() {
   let buffer = await response.arrayBuffer();
   let bios = new Uint8Array(buffer);
   let biosMemory = new Uint8Array(0x10000);
+  let mm = new MemoryMapper();
   bios.forEach((b, i) => (biosMemory[i] = b));
 
   response = await fetch("system/cbios_logo_msx1.rom");
@@ -52,7 +54,7 @@ async function reset() {
     let game = new Uint8Array(buffer);
     if (buffer.byteLength > 0x8000) {
       slot1 = new KonamiMegaRomSCC(game, (reg, val) =>
-        sccNode?.port.postMessage([reg, val])
+        sccNode?.port.postMessage([reg, val]),
       );
     } else {
       let gameMemory = new Uint8Array(0x10000);
@@ -60,6 +62,12 @@ async function reset() {
       game.forEach((g, i) => (gameMemory[i + 0x4000] = g));
       slot1 = new Rom(gameMemory);
     }
+  } else {
+     response = await fetch("system/Nextor-2.1.4.RogueDrive.bin");
+     slot1 = new SubSlotSelector([
+      // Ascii mapper, 
+      
+     ]);
   }
 
   // Define the MSX slots and sub-slots (slot 3)
@@ -141,6 +149,11 @@ async function reset() {
         case 0xd6:
         case 0xd7:
           console.log("Disk access...");
+                case 0xfc:
+        case 0xfd:
+        case 0xfe:
+        case 0xff:
+          mm.io_write(address, value);
         default:
           console.log("Unsupported port : 0x" + address.toString(16));
           break;
@@ -182,14 +195,17 @@ reset().then(() => {
 
 window.onpopstate = function (event) {
   alert(
-    "location: " + document.location + ", state: " + JSON.stringify(event.state)
+    "location: " +
+      document.location +
+      ", state: " +
+      JSON.stringify(event.state),
   );
 };
 
 function createChorus(
   audioContext: AudioContext,
   input: AudioNode,
-  output: AudioNode
+  output: AudioNode,
 ) {
   // 2. Creëer DelayNodes voor links en rechts
   const leftDelay = audioContext.createDelay();
@@ -284,7 +300,7 @@ window.onload = () => {
 
       // Add the worklet module
       await audioContext.audioWorklet.addModule(
-        "./dist/src/AY-3-8910-processor.js"
+        "./dist/src/AY-3-8910-processor.js",
       );
       await audioContext.audioWorklet.addModule("./dist/src/SCC-processor.js");
 
@@ -296,16 +312,14 @@ window.onload = () => {
         outputChannelCount: [2],
       });
 
-            const gainNodePSG = audioContext.createGain();
-            gainNodePSG.gain.setValueAtTime(0.15, audioContext.currentTime);
+      const gainNodePSG = audioContext.createGain();
+      gainNodePSG.gain.setValueAtTime(0.15, audioContext.currentTime);
 
-            const gainNodeSCC = audioContext.createGain();
-            gainNodeSCC.gain.setValueAtTime(.15, audioContext.currentTime);
-            ;
-
-            // Connect the node to the audio context
-            ay3Node.connect(gainNodePSG);
-            sccNode.connect(gainNodeSCC);;
+      const gainNodeSCC = audioContext.createGain();
+      gainNodeSCC.gain.setValueAtTime(0.15, audioContext.currentTime);
+      // Connect the node to the audio context
+      ay3Node.connect(gainNodePSG);
+      sccNode.connect(gainNodeSCC);
 
       gainNodePSG.connect(audioContext.destination);
 
