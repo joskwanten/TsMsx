@@ -10,6 +10,7 @@ import { PPI } from "./PPI.js";
 import { KonamiMegaRomSCC } from "./KonamiMegaRomSCC.js";
 import { Renderer } from "./Renderer.js";
 import { MemoryMapper } from "./MemoryMapper.js";
+import { Ascii16Rom } from "./Ascii16Rom.js";
 
 function changeBackground(c: number) {
   let element: any = document.querySelector(".backdrop");
@@ -63,10 +64,14 @@ async function reset() {
       slot1 = new Rom(gameMemory);
     }
   } else {
-     response = await fetch("system/Nextor-2.1.4.RogueDrive.bin");
-     slot1 = new SubSlotSelector([
-      // Ascii mapper, 
-      
+      response = await fetch("system/Nextor-2.1.4.RogueDrive.bin");
+      buffer = await response.arrayBuffer();
+      let nextor = new Uint8Array(buffer);
+      slot1 = new SubSlotSelector([
+        new Ascii16Rom(nextor),
+        new EmptySlot(),
+        mm,
+        new EmptySlot() 
      ]);
   }
 
@@ -88,6 +93,13 @@ async function reset() {
 
     read8(address: number): number {
       switch (address) {
+        case 0x60:
+        case 0x61:
+        case 0x62:
+        case 0x63:
+        case 0x64:
+        case 0x65:
+          return 0;
         case 0x98:
           return vdp.read(false);
         case 0x99:
