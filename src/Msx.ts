@@ -75,9 +75,9 @@ async function reset() {
       buffer = await response.arrayBuffer();
       let nextor = new Uint8Array(buffer);
       slot1 = new SubSlotSelector([
-        new Ascii16Rom(nextor),
+        new EmptySlot(), //new Ascii16Rom(nextor),
         new EmptySlot(),
-        mm,
+        new EmptySlot(),
         new EmptySlot() 
      ]);
   }
@@ -89,7 +89,7 @@ async function reset() {
   let slot3 = new SubSlotSelector([
     new EmptySlot(),
     new EmptySlot(),
-    new Ram(),
+    mm,
     new EmptySlot(),
   ]);
   let slots = new Slots([slot0, slot1, slot2, slot3]);
@@ -130,7 +130,7 @@ async function reset() {
           console.log("Disk access...");
           return 0x00;
         default:
-          console.log("Unsupported port : 0x" + address.toString(16));
+          //console.log("Unsupported port : 0x" + address.toString(16));
           return 0xff;
       }
     }
@@ -159,7 +159,7 @@ async function reset() {
           ay3Node?.port.postMessage({ psgRegisters: this.psgRegisters });
           break;
         case 0xa8:
-          console.log(`Slot select 0b${value.toString(2)}`);
+          //console.log(`Slot select 0b${value.toString(2)}`);
           slots.setSlotSelector(value);
           break;
         case 0xa9:
@@ -181,8 +181,9 @@ async function reset() {
         case 0xfe:
         case 0xff:
           mm.io_write(address, value);
+          break;
         default:
-          console.log("Unsupported port : 0x" + address.toString(16));
+          //console.log("Unsupported port : 0x" + address.toString(16));
           break;
       }
     }

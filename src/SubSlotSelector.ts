@@ -34,7 +34,7 @@ export class SubSlotSelector implements Memory {
 
     uwrite8(address: number, value: number): void {
         if (address === 0xffff) {
-            console.log(`SubSlot select 0b${value.toString(2)}`);
+            //console.log(`SubSlot select 0b${value.toString(2)}`);
             this.subSlotRegister = value & 0xff;
         } else {
             this.selectedSlot(address).uwrite8(address, value);
